@@ -20,4 +20,5 @@ jobs:
           user: ${{ secrets.SFTP_USER }}
           user_private_key: ${{ secrets.SFTP_PK }}
           remote: "/var/www/html-ar/"
+          mirror_options: "--exclude-glob=.git*/ --verbose"
 
