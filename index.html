@@ -279,7 +279,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           //float angle = atan2f(dy, dx);
           const gps_dy = interesting_lat-latitude;
           const gps_dx = Math.cos(Math.PI/180.0*latitude) * (interesting_lon-longitude);
-          const gps_angle = Math.atan2(dy, dx);
+          const gps_angle = Math.atan2(gps_dy, gps_dx);
           const gps_angle_deg = gps_angle*180/Math.PI;
 
           document.querySelector('#uitext2').innerHTML = `gps: ${latitude} ° | ${longitude} °` +
