@@ -13,6 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Set current date as env variable
+        run: echo "NOW::$(date +'%Y-%m-%dT%H:%M:%S')" >> $GITHUB_ENV
+      
+      - name: Tag index with current datetime
+        run: sed -i 's/[[datetime]]/$NOW/g' index.html
+
       - name: SFTP Sync
         uses: swillner/sftp-sync-action@v1.0
         with:
