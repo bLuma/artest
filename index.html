@@ -261,6 +261,43 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         return Math.sqrt((p1.x-p2.x)*(p1.x-p2.x) + (p1.y-p2.y)*(p1.y-p2.y) + (p1.z-p2.z)*(p1.z-p2.z));
       }
 
+      function distHarvesine(gps1, gps2) {
+        const [lat1, lon1] = gps1;
+        const [lat2, lon2] = gps2;
+
+        const R = 6371e3; // metres
+        const theta1 = lat1 * Math.PI/180; // φ, λ in radians
+        const theta2 = lat2 * Math.PI/180;
+        const deltaTheta = (lat2-lat1) * Math.PI/180;
+        const deltaLambda = (lon2-lon1) * Math.PI/180;
+
+        const a = Math.sin(deltaTheta/2) * Math.sin(deltaTheta/2) +
+                  Math.cos(theta1) * Math.cos(theta2) *
+                  Math.sin(deltaLambda/2) * Math.sin(deltaLambda/2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        const d = R * c; // in metres
+
+        return d;
+      }
+
+      function gpsBearing(gps1, gps2) {
+        const [lat1, lon1] = gps1;
+        const [lat2, lon2] = gps2;
+        const theta1 = lat1;
+        const theta2 = lat2;
+        const lambda1 = lon1;
+        const lambda2 = lon2;
+
+        const y = Math.sin(lambda2-lambda1) * Math.cos(theta2);
+        const x = Math.cos(theta1)*Math.sin(theta2) -
+                  Math.sin(theta1)*Math.cos(theta2)*Math.cos(lambda2-lambda1);
+        const angl = Math.atan2(y, x);
+        const brng = (angl*180/Math.PI + 360) % 360; // in degrees
+
+        return brng;
+      }
+
       let latitude = undefined;
       let longitude = undefined;
       let sensorquat = undefined;
@@ -282,11 +319,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           const gps_angle = Math.atan2(gps_dy, gps_dx);
           const gps_angle_deg = gps_angle*180/Math.PI;
 
+          const gps_dist_harvesine = distHarvesine([latitude,longitude], [interesting_lat,interesting_lon]);
+          const gps_bearing = gpsBearing([latitude,longitude], [interesting_lat,interesting_lon]);
+
           document.querySelector('#uitext2').innerHTML = `gps: ${latitude} ° | ${longitude} °` +
             `<br>gpsxyz[km]: ${quatToStr(convertGpsToXyzw(latitude, longitude))}` +
             `<br>TARxyz[km]: ${quatToStr(convertGpsToXyzw(interesting_lat, interesting_lon))}` +
-            `<br>TARdist[m]: ${valToStr(1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon)))}` +
-            `<br>GpsAngle: ${valToStr(gps_angle)} | ${valToStr(gps_angle_deg)}`;
+            `<br>TARdist[m]: ${valToStr(1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon)))} | ${valToStr(gps_dist_harvesine)}` +
+            `<br>GpsAngle: ${valToStr(gps_angle)} | ${valToStr(gps_angle_deg)} | ${valToStr(gps_bearing)}`;
 
             const [qx, qy, qz, qw] = sensorquat;
 
@@ -321,24 +361,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         let pose = frame.getViewerPose(xrRefSpace);
         let oriDeg = "";
 
-        /*if (pose && pose.transform) {
-          try {
-          const {x:qx, y:qy, z:qz, w:qw} = pose.transform.orientation;
-
-          const sinr_cosp = 2*(qw*qx + qy*qz);
-          const cosr_cosp = 1 - 2*(qx*qx + qy*qy);
-          const roll = Math.atan2(sinr_cosp, cosr_cosp);
-
-          const sinp = 2*(qw*qy-qz*qx);
-          const pitch = Math.abs(sinp) >= 1 ? Math.PI/2 * Math.sign(sinp) : Math.asin(sinp);
-
-          const siny_cosp = 2*(qw*qz + qx*qy);
-          const cosy_cosp = 1 - 2*(qy*qy + qz*qz);
-          const yaw = Math.atan2(siny_cosp, cosy_cosp);
-          
-          oriDeg = "---: " + quatToStr([roll*180/Math.PI,pitch*180/Math.PI,yaw*180/Math.PI,0]);
-          } catch (err) {}
-        }*/
         document.querySelector('#uitext').innerHTML = '' + 
             (pose && pose.transform ? "Pos: " + pointToStr(pose.transform.position) : "") + '<br>' +
             (pose && pose.transform ? "Ori: " + pointToStr(pose.transform.orientation) + "<br>" + oriDeg  : "");
