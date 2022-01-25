@@ -339,7 +339,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             `<br>TARxyz[km]: ${quatToStr(convertGpsToXyzw(interesting_lat, interesting_lon))}` +
             `<br>TARdist[m]: ${valToStr(1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon)))} | ${valToStr(gps_dist_harvesine)}` +
             `<br>GpsAngle: ${valToStr(gps_angle)} | ${valToStr(gps_angle_deg)} | ${valToStr(gps_bearing)}` + 
-            `<br>Bearing: ${valToStr(yaw_ori < 0 ? (180-Math.abs(yaw_ori)) + 180 : yaw_ori)}`;
+            `<br>Bearing: ${valToStr(360 - (yaw_ori < 0 ? (180-Math.abs(yaw_ori)) + 180 : yaw_ori))}`;
 
 
           // roll 90 mobil vertikalne, 0 mobil lezi, 180 mobil kouka nahoru
