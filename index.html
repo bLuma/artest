@@ -331,7 +331,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           const siny_cosp = 2*(qw*qz + qx*qy);
           const cosy_cosp = 1 - 2*(qy*qy + qz*qz);
           const yaw = Math.atan2(siny_cosp, cosy_cosp);
-          yaw_ori = yaw;
+          yaw_ori = yaw*180/Math.PI;
 
 
           document.querySelector('#uitext2').innerHTML = `gps: ${latitude} ° | ${longitude} °` +
