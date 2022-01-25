@@ -311,43 +311,43 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       function updateUIInfo() {
         if (latitude !== undefined && longitude !== undefined && sensorquat !== undefined ) {
-          //float dy = lat2 - lat1;
-          //float   dx = cosf(M_PI/180*lat1)*(long2 - long1);
-          //float angle = atan2f(dy, dx);
           const gps_dy = interesting_lat-latitude;
           const gps_dx = Math.cos(Math.PI/180.0*latitude) * (interesting_lon-longitude);
           const gps_angle = Math.atan2(gps_dy, gps_dx);
-          const gps_angle_deg = gps_angle*180/Math.PI;
+          const gps_angle_deg = gps_angle*180/Math.PI; // wrong???
 
           const gps_dist_harvesine = distHarvesine([latitude,longitude], [interesting_lat,interesting_lon]);
-          const gps_bearing = gpsBearing([latitude,longitude], [interesting_lat,interesting_lon]);
+          const gps_bearing = gpsBearing([latitude,longitude], [interesting_lat,interesting_lon]); // 0 - sever, 360* podle hod. rucicek
+
+          const [qx, qy, qz, qw] = sensorquat;
+
+          const sinr_cosp = 2*(qw*qx + qy*qz);
+          const cosr_cosp = 1 - 2*(qx*qx + qy*qy);
+          const roll = Math.atan2(sinr_cosp, cosr_cosp);
+
+          const sinp = 2*(qw*qy-qz*qx);
+          const pitch = Math.abs(sinp) >= 1 ? Math.PI/2 * Math.sign(sinp) : Math.asin(sinp);
+
+          const siny_cosp = 2*(qw*qz + qx*qy);
+          const cosy_cosp = 1 - 2*(qy*qy + qz*qz);
+          const yaw = Math.atan2(siny_cosp, cosy_cosp);
+          yaw_ori = yaw;
+
 
           document.querySelector('#uitext2').innerHTML = `gps: ${latitude} ° | ${longitude} °` +
             `<br>gpsxyz[km]: ${quatToStr(convertGpsToXyzw(latitude, longitude))}` +
             `<br>TARxyz[km]: ${quatToStr(convertGpsToXyzw(interesting_lat, interesting_lon))}` +
             `<br>TARdist[m]: ${valToStr(1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon)))} | ${valToStr(gps_dist_harvesine)}` +
-            `<br>GpsAngle: ${valToStr(gps_angle)} | ${valToStr(gps_angle_deg)} | ${valToStr(gps_bearing)}`;
+            `<br>GpsAngle: ${valToStr(gps_angle)} | ${valToStr(gps_angle_deg)} | ${valToStr(gps_bearing)}` + 
+            `<br>Bearing: ${valToStr(yaw_ori < 0 ? Math.abs(yaw_ori) + 180 : yaw_ori)}`;
 
-            const [qx, qy, qz, qw] = sensorquat;
 
-            const sinr_cosp = 2*(qw*qx + qy*qz);
-            const cosr_cosp = 1 - 2*(qx*qx + qy*qy);
-            const roll = Math.atan2(sinr_cosp, cosr_cosp);
+          // roll 90 mobil vertikalne, 0 mobil lezi, 180 mobil kouka nahoru
+          // pitch 0 - mobil rovne, -90 mobil na levem boku, 90 mobil na pravem boku 
+          // yaw  sever-0, zapad-90, vychod--90 
 
-            const sinp = 2*(qw*qy-qz*qx);
-            const pitch = Math.abs(sinp) >= 1 ? Math.PI/2 * Math.sign(sinp) : Math.asin(sinp);
-
-            const siny_cosp = 2*(qw*qz + qx*qy);
-            const cosy_cosp = 1 - 2*(qy*qy + qz*qz);
-            const yaw = Math.atan2(siny_cosp, cosy_cosp);
-            yaw_ori = yaw;
-
-            // roll 90 mobil vertikalne, 0 mobil lezi, 180 mobil kouka nahoru
-            // pitch 0 - mobil rovne, -90 mobil na levem boku, 90 mobil na pravem boku 
-            // yaw  sever-0, zapad-90, vychod--90 
-
-            document.querySelector('#uitext3').innerHTML = "AOS: " + quatToStr(sensorquat);
-            document.querySelector('#uitext4').innerHTML = "RPY(XYZ): " + quatToStr([roll*180/Math.PI, pitch*180/Math.PI, yaw*180/Math.PI, 0]);          
+          document.querySelector('#uitext3').innerHTML = "AOS: " + quatToStr(sensorquat);
+          document.querySelector('#uitext4').innerHTML = "RPY(XYZ): " + quatToStr([roll*180/Math.PI, pitch*180/Math.PI, yaw*180/Math.PI, 0]);          
         }
 
         if (devori !== undefined) {
