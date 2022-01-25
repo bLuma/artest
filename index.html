@@ -265,6 +265,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let longitude = undefined;
       let sensorquat = undefined;
       let devori = undefined;
+      let yaw_ori = undefined;
 
       const interesting_lat = 50.033978;
       const interesting_lon = 15.767538;
@@ -273,10 +274,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       function updateUIInfo() {
         if (latitude !== undefined && longitude !== undefined && sensorquat !== undefined ) {
+          //float dy = lat2 - lat1;
+          //float   dx = cosf(M_PI/180*lat1)*(long2 - long1);
+          //float angle = atan2f(dy, dx);
+          const gps_dy = interesting_lat-latitude;
+          const gps_dx = Math.cos(Math.PI/180.0*latitude) * (interesting_lon-longitude);
+          const gps_angle = Math.atan2(dy, dx);
+          const gps_angle_deg = gps_angle*180/Math.PI;
+
           document.querySelector('#uitext2').innerHTML = `gps: ${latitude} ° | ${longitude} °` +
             `<br>gpsxyz[km]: ${quatToStr(convertGpsToXyzw(latitude, longitude))}` +
             `<br>TARxyz[km]: ${quatToStr(convertGpsToXyzw(interesting_lat, interesting_lon))}` +
-            `<br>TARdist[m]: ${valToStr(1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon)))}`;
+            `<br>TARdist[m]: ${valToStr(1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon)))}` +
+            `<br>GpsAngle: ${valToStr(gps_angle)} | ${valToStr(gps_angle_deg)}`;
 
             const [qx, qy, qz, qw] = sensorquat;
 
@@ -290,6 +300,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             const siny_cosp = 2*(qw*qz + qx*qy);
             const cosy_cosp = 1 - 2*(qy*qy + qz*qz);
             const yaw = Math.atan2(siny_cosp, cosy_cosp);
+            yaw_ori = yaw;
 
             // roll 90 mobil vertikalne, 0 mobil lezi, 180 mobil kouka nahoru
             // pitch 0 - mobil rovne, -90 mobil na levem boku, 90 mobil na pravem boku 
@@ -362,6 +373,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           // +z k uzivateli, -z od uzivatele
           // +x doprava, -x doleva
           // +y nahoru, -y dolu
+          // yaw  sever-0, zapad-90, vychod--90 
+          // const anchorPose = new XRRigidTransform({x: 0, y: -1, z: -5, w: 1}, {x: 0, y: 0, z: 0, w: 1});
+          //const myGps = convertGpsToXyzw(latitude, longitude);
+          //const targetGps = convertGpsToXyzw(interesting_lat, interesting_lon);
+          //const distance = 1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon));
+
           const anchorPose = new XRRigidTransform({x: 0, y: -1, z: -5, w: 1}, {x: 0, y: 0, z: 0, w: 1});
           frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
             addAnchoredObjectsToScene(anchor);
