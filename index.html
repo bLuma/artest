@@ -88,7 +88,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       arObject.visible = false;
       scene.addNode(arObject);
 
-      let flower = new Gltf2Node({url: 'media/gltf/sunflower/sunflower.gltf'});
+      let flower = new Gltf2Node({url: 'media/gltf/pardubice_veselka/model01.glb'});
       arObject.addNode(flower);
 
       let reticle = new Gltf2Node({url: 'media/gltf/reticle/reticle.gltf'});
@@ -187,7 +187,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const MAX_ANCHORED_OBJECTS = 30;
       let anchoredObjects = [];
       function addAnchoredObjectsToScene(anchor) {
-        let flower = new Gltf2Node({url: 'media/gltf/sunflower/sunflower.gltf'});
+        let flower = new Gltf2Node({url: 'media/gltf/pardubice_veselka/model01.glb'});
         scene.addNode(flower);
         anchoredObjects.push({
           anchoredObject: flower,
@@ -401,7 +401,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           //const targetGps = convertGpsToXyzw(interesting_lat, interesting_lon);
           //const distance = 1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon));
 
-          const anchorPose = new XRRigidTransform({x: 0, y: -1, z: -5, w: 1}, {x: 0, y: 0, z: 0, w: 1});
+          const anchorPose = new XRRigidTransform({x: 0, y: -1, z: -50, w: 1}, {x: 0, y: 0, z: 0, w: 1});
           frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
             addAnchoredObjectsToScene(anchor);
           }, (error) => {
