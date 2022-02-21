@@ -59,7 +59,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         <div id="uitext3">ui3</div>
         <div id="uitext4">ui4</div>
         <div id="uitext5">ui5</div>
-        <div id="uitext6">ui6</div>
+        <div id="uitext6"></div>
         <!-- <button id="findme">GPS</button> -->
       </div>
     </div>
@@ -310,7 +310,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const interesting_lat = 50.033978;
       const interesting_lon = 15.767538;
 
-      const models_at = [/* kašna fei */ [50.033978,15.767538], /* u domu */ [50.050206, 15.771499]];
+      const models_at = [/* kašna fei */ [50.033978,15.767538], /* u domu */ [50.050206, 15.771499], /* veselka test */ [50.036244, 15.770473],];
 
       let addedOne = false;
 
@@ -444,7 +444,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             const coord_z = -Math.sin(gps_bearing_norm_rad) * gps_dist_harvesine * z_invert;
             const coord_x = +Math.cos(gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
 
-            document.querySelector('#uitext6').innerHTML += `${gps_dist_harvesine} ${coord_z} ${coord_x} - `
+            document.querySelector('#uitext6').innerHTML += `${valToStr(gps_dist_harvesine)} ${valToStr(coord_z)} ${valToStr(coord_x)}, `
 
             //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -50, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             const anchorPose = new XRRigidTransform({x: coord_x, y: -1.55, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
