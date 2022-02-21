@@ -70,7 +70,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import {Node} from './js/render/core/node.js';
       import {Gltf2Node} from './js/render/nodes/gltf2.js';
       import {DropShadowNode} from './js/render/nodes/drop-shadow.js';
-      import {vec3} from './js/render/math/gl-matrix.js';
+      import {vec3,mat4} from './js/render/math/gl-matrix.js';
       import {Ray} from './js/render/math/ray.js';
 
       // XR globals.
@@ -85,12 +85,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let scene = new Scene();
       scene.enableStats(false);
 
-      let arObject = new Node();
-      arObject.visible = false;
-      scene.addNode(arObject);
+      // let arObject = new Node();
+      // arObject.visible = false;
+      // scene.addNode(arObject);
 
-      let flower = new Gltf2Node({url: 'media/gltf/pardubice_veselka/model01.glb'});
-      arObject.addNode(flower);
+      // let flower = new Gltf2Node({url: 'media/gltf/pardubice_veselka/model01.glb'});
+      // arObject.addNode(flower);
 
       let reticle = new Gltf2Node({url: 'media/gltf/reticle/reticle.gltf'});
       reticle.visible = false;
@@ -99,9 +99,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       // Having a really simple drop shadow underneath an object helps ground
       // it in the world without adding much complexity.
-      let shadow = new DropShadowNode();
-      vec3.set(shadow.scale, 0.15, 0.15, 0.15);
-      arObject.addNode(shadow);
+      // let shadow = new DropShadowNode();
+      // vec3.set(shadow.scale, 0.15, 0.15, 0.15);
+      // arObject.addNode(shadow);
 
       const MAX_FLOWERS = 30;
       let flowers = [];
@@ -393,7 +393,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             continue;
           }
           const anchorPose = frame.getPose(anchor.anchorSpace, xrRefSpace);
-          anchoredObject.matrix = anchorPose.transform.matrix;
+          let t = mat4.create();
+          mat4.identity(t);
+          mat4.scale(t, t, anchoredObject.scale)
+          let r = mat4.create();
+          mat4.multiply(r, t, anchorPose.transform.matrix);
+
+          //anchoredObject.matrix = anchorPose.transform.matrix;
+          anchoredObject.matrix = r;
         }
 
         if (!addedOne) {
