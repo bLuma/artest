@@ -1,6 +1,6 @@
 <!doctype html>
 <!--
-Copyright 2021 The Immersive Web Community Group
+Copyright 2021 The Immersive Web Community Group, 2022 Roman Diviš
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
@@ -22,6 +22,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 <html>
   <head>
     <meta charset='utf-8'>
+    <meta name="language" content="cs">
     <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no'>
     <meta name='mobile-web-app-capable' content='yes'>
     <meta name='apple-mobile-web-app-capable' content='yes'>
@@ -29,7 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <link rel='icon' type='image/png' sizes='96x96' href='favicon-96x96.png'>
     <link rel='stylesheet' href='css/common.css'>
 
-    <title>Hit Test with Anchors</title>
+    <title>AR test</title>
     <style>
       #uiinner {
         background-color: black !important;
@@ -186,8 +187,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       const MAX_ANCHORED_OBJECTS = 30;
       let anchoredObjects = [];
-      function addAnchoredObjectsToScene(anchor) {
+      function addAnchoredObjectsToScene(anchor, scale) {
         let flower = new Gltf2Node({url: 'media/gltf/pardubice_veselka/model01.glb'});
+        flower.scale = scale;
         scene.addNode(flower);
         anchoredObjects.push({
           anchoredObject: flower,
@@ -210,7 +212,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         if (reticle.visible) {
           // Create an anchor.
           reticleHitTestResult.createAnchor().then((anchor) => {
-            addAnchoredObjectsToScene(anchor);
+            addAnchoredObjectsToScene(anchor, 1);
           }, (error) => {
             console.error("Could not create anchor: " + error);
           });
@@ -304,8 +306,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let devori = undefined;
       let yaw_ori = undefined;
 
+      // kašna fei
       const interesting_lat = 50.033978;
       const interesting_lon = 15.767538;
+
+      const models_at = [/* kašna fei */ [50.033978,15.767538], /* u domu */ [50.050206, 15.771499]];
 
       let addedOne = false;
 
@@ -395,18 +400,51 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           // +z k uzivateli, -z od uzivatele
           // +x doprava, -x doleva
           // +y nahoru, -y dolu
+          //
+          // - top-down view
+          //  3                 0 q.
+          //          | -z
+          //          |----X
+          //          |  / |
+          // ---------+----------
+          //  -x      |        +x  
+          //          |
+          //          | +z
+          //   2                1
           // yaw  sever-0, zapad-90, vychod--90 
+          //
           // const anchorPose = new XRRigidTransform({x: 0, y: -1, z: -5, w: 1}, {x: 0, y: 0, z: 0, w: 1});
           //const myGps = convertGpsToXyzw(latitude, longitude);
           //const targetGps = convertGpsToXyzw(interesting_lat, interesting_lon);
           //const distance = 1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon));
+          for (const [tlat, tlon] of models_at) {
+            const gps_dist_harvesine = distHarvesine([latitude,longitude], [tlat,tlon]);
+            const gps_bearing = gpsBearing([latitude,longitude], [tlat,tlon]); // 0 - sever, 360* podle hod. rucicek
 
-          const anchorPose = new XRRigidTransform({x: 0, y: -1, z: -50, w: 1}, {x: 0, y: 0, z: 0, w: 1});
-          frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
-            addAnchoredObjectsToScene(anchor);
-          }, (error) => {
-            document.querySelector('#uitext6').innerHTML = ("Could not create anchor: " + error);
-          });
+            const gps_bearing_rad = gps_bearing * Math.PI / 180.0;
+            //
+            const gps_bearing_norm = gps_bearing >= 270 ? gps_bearing - 270 : (gps_bearing >= 180 ? gps_bearing - 180 : (gps_bearing >= 90 ? gps_bearing - 90 : gps_bearing));
+            const gps_bearing_quadrant = gps_bearing >= 270 ? 3 : (gps_bearing >= 180 ? 2 : (gps_bearing >= 90 ? 1 : 0));
+            const gps_bearing_norm_rad = gps_bearing * Math.PI / 180.0;
+
+            const z_invert = (gps_bearing_quadrant === 1 || gps_bearing_quadrant === 2) ? -1 : 1;
+            const x_invert = (gps_bearing_quadrant >= 2) ? -1 : 1;
+
+            // sin bear = -z / dist
+            // cos bear = +x / dist
+            // -Z = sin bear * dist 
+            // +x = cos  bear * dist
+            const coord_z = -Math.sin(gps_bearing_norm_rad) * gps_dist_harvesine * z_invert;
+            const coord_x = +Math.cos(gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
+
+            //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -50, w: 1}, {x: 0, y: 0, z: 0, w: 1});
+            const anchorPose = new XRRigidTransform({x: coord_x, y: -1.55, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
+            frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
+              addAnchoredObjectsToScene(anchor, 100);
+            }, (error) => {
+              document.querySelector('#uitext6').innerHTML = ("Could not create anchor: " + error);
+            });
+          }
           addedOne = true;
         }
 
