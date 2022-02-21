@@ -395,7 +395,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           const anchorPose = frame.getPose(anchor.anchorSpace, xrRefSpace);
           let t = mat4.create();
           mat4.identity(t);
-          mat4.scale(t, t, [10,10,10]);//[1000,1000,1000]);//anchoredObject.scale);
+          mat4.scale(t, t, [1000,1000,1000]);//anchoredObject.scale);
           let r = mat4.create();
           mat4.multiply(r, anchorPose.transform.matrix, t);
 
@@ -447,7 +447,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             document.querySelector('#uitext6').innerHTML += `${valToStr(gps_dist_harvesine)} ${valToStr(coord_z)} ${valToStr(coord_x)}, `
 
             //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -50, w: 1}, {x: 0, y: 0, z: 0, w: 1});
-            const anchorPose = new XRRigidTransform({x: coord_x, y: -1.55, z: coord_z, w: 1}, {x: 0, y: 1.0, z: 0, w: 1});
+            const anchorPose = new XRRigidTransform({x: coord_x, y: -1.55, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
               addAnchoredObjectsToScene(anchor, 1000);
             }, (error) => {
