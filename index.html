@@ -437,10 +437,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             const coord_z = -Math.sin(gps_bearing_norm_rad) * gps_dist_harvesine * z_invert;
             const coord_x = +Math.cos(gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
 
+            document.querySelector('#uitext6').innerHTML += `${gps_dist_harvesine} ${coord_z} ${coord_x} - `
+
             //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -50, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             const anchorPose = new XRRigidTransform({x: coord_x, y: -1.55, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
-              addAnchoredObjectsToScene(anchor, 100);
+              addAnchoredObjectsToScene(anchor, 10);
             }, (error) => {
               document.querySelector('#uitext6').innerHTML = ("Could not create anchor: " + error);
             });
