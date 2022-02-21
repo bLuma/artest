@@ -395,7 +395,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           const anchorPose = frame.getPose(anchor.anchorSpace, xrRefSpace);
           let t = mat4.create();
           mat4.identity(t);
-          mat4.scale(t, t, [100,100,100]);//anchoredObject.scale)
+          mat4.scale(t, t, anchoredObject.scale);
           let r = mat4.create();
           mat4.multiply(r, anchorPose.transform.matrix, t);
 
