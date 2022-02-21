@@ -189,7 +189,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let anchoredObjects = [];
       function addAnchoredObjectsToScene(anchor, scale) {
         let flower = new Gltf2Node({url: 'media/gltf/pardubice_veselka/model01.glb'});
-        flower.scale = scale;
+        flower.scale = new Float32Array([scale, scale, scale]);
         scene.addNode(flower);
         anchoredObjects.push({
           anchoredObject: flower,
@@ -442,7 +442,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -50, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             const anchorPose = new XRRigidTransform({x: coord_x, y: -1.55, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
-              addAnchoredObjectsToScene(anchor, 10);
+              addAnchoredObjectsToScene(anchor, 100);
             }, (error) => {
               document.querySelector('#uitext6').innerHTML = ("Could not create anchor: " + error);
             });
