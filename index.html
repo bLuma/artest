@@ -320,6 +320,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let sensorquat = undefined;
       let devori = undefined;
       let yaw_ori = undefined;
+      let phone_bearing = undefined;
 
       // kašna fei
       const interesting_lat = 50.033978;
@@ -353,6 +354,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           const yaw = Math.atan2(siny_cosp, cosy_cosp);
           yaw_ori = yaw*180/Math.PI;
 
+          phone_bearing = 360 - (yaw_ori < 0 ? (180-Math.abs(yaw_ori)) + 180 : yaw_ori);ms
 
           document.querySelector('#uitext2').innerHTML = `gps: ${latitude} ° | ${longitude} °` +
             `<br>gpsxyz[km]: ${quatToStr(convertGpsToXyzw(latitude, longitude))}` +
@@ -442,9 +444,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           //const myGps = convertGpsToXyzw(latitude, longitude);
           //const targetGps = convertGpsToXyzw(interesting_lat, interesting_lon);
           //const distance = 1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon));
+
+
           for (const [tlat, tlon, tname] of models_at) {
             const gps_dist_harvesine = distHarvesine([latitude,longitude], [tlat,tlon]);
-            const gps_bearing = gpsBearing([latitude,longitude], [tlat,tlon]); // 0 - sever, 360* podle hod. rucicek
+            const gps_bearing = gpsBearing([latitude,longitude], [tlat,tlon]) - phone_bearing; // 0 - sever, 360* podle hod. rucicek
 
             const gps_bearing_rad = gps_bearing * Math.PI / 180.0;
             //
