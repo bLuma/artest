@@ -498,7 +498,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
               name: 'ME',
             });
 
-            const map = new ol.Map({
+            // const models_at = [/* kašna fei */ [50.033978,15.767538], /* u domu */ [50.050206, 15.771499], /* veselka test */ [50.036244, 15.770473],];
+            const targetFeature = new ol.Feature({
+              geometry: new ol.geom.Point(ol.proj.fromLonLat([15.771499,50.050206])),
+              name: 'TARGET',
+            });
+
+            map = new ol.Map({
               target: 'map',
               layers: [
                 new ol.layer.Tile({
@@ -506,7 +512,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                 }),
                 new ol.layer.Vector({
                   source: new ol.source.Vector({
-                    features: [iconFeature]
+                    features: [iconFeature, targetFeature]
                   }),
                   style: new ol.style.Style({
                     image: new ol.style.Icon({
@@ -520,7 +526,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
               ],
               view: new ol.View({
                 center: ol.proj.fromLonLat([longitude, latitude]),
-                zoom: 6
+                zoom: 15
               })
             });
 
