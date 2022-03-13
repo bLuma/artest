@@ -29,6 +29,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <link rel='icon' type='image/png' sizes='32x32' href='favicon-32x32.png'>
     <link rel='icon' type='image/png' sizes='96x96' href='favicon-96x96.png'>
     <link rel='stylesheet' href='css/common.css'>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.13.0/css/ol.css" type="text/css">
+    <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.13.0/build/ol.js"></script>
+    <style>
+      .map {
+        height: 400px;
+        width: 100%;
+      }
+    </style>
 
     <title>AR test</title>
     <style>
@@ -51,6 +59,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       <details open>
         <a href="./ar/index.html">ar.js</a>
           <!--<a class="back" href="./">Back</a>--> datetimehere
+
+          <div id="map" class="map"></div>
+
       </details>
     </header>
     <div id="ui">
@@ -64,7 +75,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         <!-- <button id="findme">GPS</button> -->
       </div>
     </div>
+
     <script type="module">
+      
+
       import {WebXRButton} from './js/util/webxr-button.js';
       import {Scene} from './js/render/scenes/scene.js';
       import {Renderer, createWebGLContext} from './js/render/core/renderer.js';
@@ -467,6 +481,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       
 
       let requestedGps = false;
+      let map = undefined;
       function geoFindMe() {
 
         function success(position) {
@@ -474,6 +489,43 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           longitude = position.coords.longitude;
 
           requestedGps = false;
+
+          if (map === undefined) {
+
+            
+            const iconFeature = new ol.Feature({
+              geometry: new ol.geom.Point(ol.proj.fromLonLat([longitude, latitude])),
+              name: 'ME',
+            });
+
+            const map = new ol.Map({
+              target: 'map',
+              layers: [
+                new ol.layer.Tile({
+                  source: new ol.source.OSM(),
+                }),
+                new ol.layer.Vector({
+                  source: new ol.source.Vector({
+                    features: [iconFeature]
+                  }),
+                  style: new ol.style.Style({
+                    image: new ol.style.Icon({
+                      anchor: [0.5, 46],
+                      anchorXUnits: 'fraction',
+                      anchorYUnits: 'pixels',
+                      src: 'https://openlayers.org/en/latest/examples/data/icon.png'
+                    })
+                  })
+                })
+              ],
+              view: new ol.View({
+                center: ol.proj.fromLonLat([longitude, latitude]),
+                zoom: 6aaaa
+              })
+            });
+
+
+          }
         }
 
         function error() {
