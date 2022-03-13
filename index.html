@@ -77,8 +77,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     </div>
 
     <script type="module">
-      
-
       import {WebXRButton} from './js/util/webxr-button.js';
       import {Scene} from './js/render/scenes/scene.js';
       import {Renderer, createWebGLContext} from './js/render/core/renderer.js';
@@ -326,7 +324,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const interesting_lat = 50.033978;
       const interesting_lon = 15.767538;
 
-      const models_at = [/* kašna fei */ [50.033978,15.767538,"kasna"], /* u domu */ [50.050206, 15.771499,"udomu"], /* veselka test */ [50.036244, 15.770473,"veselka"],];
+      const models_at = [/* kašna fei */ [50.033978,15.767538,"kasna"], /* u domu */ [50.050206, 15.771499,"udomu"], /* veselka test */ [50.036244, 15.770473,"veselka"], [50.04861604866441, 15.77152305442406,"kruhak"]];
+      //const models_at = [ [50.050206, 15.771499,"udomu"]];
 
       let addedOne = false;
 
@@ -354,7 +353,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           const yaw = Math.atan2(siny_cosp, cosy_cosp);
           yaw_ori = yaw*180/Math.PI;
 
-          phone_bearing = 360 - (yaw_ori < 0 ? (180-Math.abs(yaw_ori)) + 180 : yaw_ori);ms
+          phone_bearing = 360 - (yaw_ori < 0 ? (180-Math.abs(yaw_ori)) + 180 : yaw_ori);
 
           document.querySelector('#uitext2').innerHTML = `gps: ${latitude} ° | ${longitude} °` +
             `<br>gpsxyz[km]: ${quatToStr(convertGpsToXyzw(latitude, longitude))}` +
@@ -431,8 +430,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           // - top-down view
           //  3                 0 q.
           //          | -z
-          //          |----X
-          //          |  / |
+          //     X----|----X
+          //     | \An|An/ |
           // ---------+----------
           //  -x      |        +x  
           //          |
@@ -448,13 +447,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
           for (const [tlat, tlon, tname] of models_at) {
             const gps_dist_harvesine = distHarvesine([latitude,longitude], [tlat,tlon]);
-            const gps_bearing = gpsBearing([latitude,longitude], [tlat,tlon]) - phone_bearing; // 0 - sever, 360* podle hod. rucicek
+            let gps_bearing = gpsBearing([latitude,longitude], [tlat,tlon]) - phone_bearing; // 0 - sever, 360* podle hod. rucicek
+            if (gps_bearing < 0)
+              gps_bearing += 360;
 
             const gps_bearing_rad = gps_bearing * Math.PI / 180.0;
             //
             const gps_bearing_norm = gps_bearing >= 270 ? gps_bearing - 270 : (gps_bearing >= 180 ? gps_bearing - 180 : (gps_bearing >= 90 ? gps_bearing - 90 : gps_bearing));
             const gps_bearing_quadrant = gps_bearing >= 270 ? 3 : (gps_bearing >= 180 ? 2 : (gps_bearing >= 90 ? 1 : 0));
-            const gps_bearing_norm_rad = gps_bearing * Math.PI / 180.0;
+            const gps_bearing_norm_rad = gps_bearing_norm * Math.PI / 180.0; 
 
             const z_invert = (gps_bearing_quadrant === 1 || gps_bearing_quadrant === 2) ? -1 : 1;
             const x_invert = (gps_bearing_quadrant >= 2) ? -1 : 1;
@@ -463,15 +464,20 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             // cos bear = +x / dist
             // -Z = sin bear * dist 
             // +x = cos  bear * dist
-            const coord_z = -Math.sin(gps_bearing_norm_rad) * gps_dist_harvesine * z_invert;
-            const coord_x = +Math.cos(gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
+            let coord_z = -Math.cos(gps_bearing_norm_rad) * gps_dist_harvesine * z_invert;
+            let coord_x = +Math.sin(gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
+
+            if (gps_bearing_quadrant == 3) {
+               coord_z = -Math.cos(Math.PI/2-gps_bearing_norm_rad) * gps_dist_harvesine;
+               coord_x = -Math.sin(Math.PI/2-gps_bearing_norm_rad) * gps_dist_harvesine;
+             }
 
             document.querySelector('#uitext6').innerHTML += `${valToStr(gps_dist_harvesine)} ${valToStr(coord_z)} ${valToStr(coord_x)}, `
 
-            console.log(`${tname} ${gps_bearing} ${gps_bearing_norm} ${gps_dist_harvesine}`);
+            console.log(`${tname} ${gps_bearing} BearNorm:${gps_bearing_norm} BearNormRad:${gps_bearing_norm_rad} Quadrant:${gps_bearing_quadrant} zInv:${z_invert} xInv:${x_invert} Dist:${gps_dist_harvesine} X:${coord_x} Z:${coord_z}`);
 
-            //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -50, w: 1}, {x: 0, y: 0, z: 0, w: 1});
-            const anchorPose = new XRRigidTransform({x: coord_x, y: -1.55, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
+            //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -5, w: 1}, {x: 0, y: 0, z: 0, w: 1});
+            const anchorPose = new XRRigidTransform({x: coord_x, y: 0 /*-1.55*/, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
               addAnchoredObjectsToScene(anchor, 1000);
             }, (error) => {
@@ -490,7 +496,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       
 
       let requestedGps = false;
-      let map = undefined;
+      let mapp = undefined;
+      let map_view = undefined;
       function geoFindMe() {
 
         function success(position) {
@@ -499,21 +506,25 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
           requestedGps = false;
 
-          if (map === undefined) {
+          if (mapp === undefined) {
 
+            const features = [];
+            const features2 = [];
             
-            const iconFeature = new ol.Feature({
+            features2.push(new ol.Feature({
               geometry: new ol.geom.Point(ol.proj.fromLonLat([longitude, latitude])),
               name: 'ME',
-            });
+            }));
 
             // const models_at = [/* kašna fei */ [50.033978,15.767538], /* u domu */ [50.050206, 15.771499], /* veselka test */ [50.036244, 15.770473],];
-            const targetFeature = new ol.Feature({
-              geometry: new ol.geom.Point(ol.proj.fromLonLat([15.771499,50.050206])),
-              name: 'TARGET',
-            });
+            for (const [tlat, tlon, tname] of models_at) {
+              features.push(new ol.Feature({
+                geometry: new ol.geom.Point(ol.proj.fromLonLat([tlon,tlat])),
+                name: tname,
+              }));
+            }
 
-            map = new ol.Map({
+            mapp = new ol.Map({
               target: 'map',
               layers: [
                 new ol.layer.Tile({
@@ -521,25 +532,38 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                 }),
                 new ol.layer.Vector({
                   source: new ol.source.Vector({
-                    features: [iconFeature, targetFeature]
+                    features: features2
                   }),
                   style: new ol.style.Style({
                     image: new ol.style.Icon({
-                      anchor: [0.5, 46],
-                      anchorXUnits: 'fraction',
-                      anchorYUnits: 'pixels',
-                      src: 'https://openlayers.org/en/latest/examples/data/icon.png'
+                      //anchor: [0.5, 46],
+                      //anchorXUnits: 'fraction',
+                      //anchorYUnits: 'pixels',
+                      src: './media/marker2.png'
+                    })
+                  })
+                }),                
+                new ol.layer.Vector({
+                  source: new ol.source.Vector({
+                    features: features
+                  }),
+                  style: new ol.style.Style({
+                    image: new ol.style.Icon({
+                      src: './media/marker.png'
                     })
                   })
                 })
               ],
-              view: new ol.View({
+              view: (map_view = new ol.View({
                 center: ol.proj.fromLonLat([longitude, latitude]),
-                zoom: 15
-              })
+                zoom: 18
+              }))
             });
 
 
+          } else {
+            // console.log(mapp.view)
+            map_view.setRotation((360-phone_bearing)*Math.PI/180.0);
           }
         }
 
