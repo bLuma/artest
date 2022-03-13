@@ -31,15 +31,15 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <link rel='stylesheet' href='css/common.css'>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.13.0/css/ol.css" type="text/css">
     <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.13.0/build/ol.js"></script>
+    <title>AR test</title>
     <style>
       .map {
         height: 400px;
         width: 100%;
       }
-    </style>
-
-    <title>AR test</title>
-    <style>
+      #ui {
+        opacity: 0.6;
+      }
       #uiinner {
         background-color: black !important;
         color:white;
@@ -102,9 +102,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       // arObject.visible = false;
       // scene.addNode(arObject);
 
-      // let flower = new Gltf2Node({url: 'media/gltf/pardubice_veselka/model01.glb'});
-      // arObject.addNode(flower);
-
       let reticle = new Gltf2Node({url: 'media/gltf/reticle/reticle.gltf'});
       reticle.visible = false;
       scene.addNode(reticle);
@@ -115,9 +112,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       // let shadow = new DropShadowNode();
       // vec3.set(shadow.scale, 0.15, 0.15, 0.15);
       // arObject.addNode(shadow);
-
-      const MAX_FLOWERS = 30;
-      let flowers = [];
 
       // Ensure the background is transparent for AR.
       scene.clear = false;
@@ -201,7 +195,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const MAX_ANCHORED_OBJECTS = 30;
       let anchoredObjects = [];
       function addAnchoredObjectsToScene(anchor, scale) {
-        let flower = new Gltf2Node({url: 'media/gltf/pardubice_veselka/model01.glb'});
+        let flower = new Gltf2Node({url: 'media/gltf/pardubice_veselka/test.glb'}); //  'media/gltf/pardubice_veselka/model01.glb'});
         flower.scale = [scale, scale, scale];
         scene.addNode(flower);
         anchoredObjects.push({
@@ -409,17 +403,24 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             continue;
           }
           const anchorPose = frame.getPose(anchor.anchorSpace, xrRefSpace);
-          if (anchorPose === undefined ||anchorPose === null)
+          if (anchorPose === undefined || anchorPose === null)
             continue;
+            // console.log(anchoredObject.matrix)
+          // console.log(anchor, anchor.anchorSpace, xrRefSpace, anchorPose)
 
           let t = mat4.create();
           mat4.identity(t);
-          mat4.scale(t, t, [10,10,10]);//anchoredObject.scale);
+          const scaleCoef = 0.1;
+          mat4.scale(t, t, [scaleCoef, scaleCoef, scaleCoef]); //anchoredObject.scale);
           let r = mat4.create();
+
+          // console.log(t)
           mat4.multiply(r, anchorPose.transform.matrix, t);
 
-          anchoredObject.matrix = anchorPose.transform.matrix;
-          //anchoredObject.matrix = r;
+          //anchoredObject.matrix = anchorPose.transform.matrix;
+          anchoredObject.matrix = r;
+          // console.log(anchoredObject.matrix)
+          // console.log(anchoredObject.matrix)
         }
 
         if (!addedOne) {
