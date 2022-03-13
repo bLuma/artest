@@ -325,7 +325,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       const interesting_lat = 50.033978;
       const interesting_lon = 15.767538;
 
-      const models_at = [/* kašna fei */ [50.033978,15.767538], /* u domu */ [50.050206, 15.771499], /* veselka test */ [50.036244, 15.770473],];
+      const models_at = [/* kašna fei */ [50.033978,15.767538,"kasna"], /* u domu */ [50.050206, 15.771499,"udomu"], /* veselka test */ [50.036244, 15.770473,"veselka"],];
 
       let addedOne = false;
 
@@ -408,14 +408,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             continue;
           }
           const anchorPose = frame.getPose(anchor.anchorSpace, xrRefSpace);
+          if (anchorPose === undefined ||anchorPose === null)
+            continue;
+
           let t = mat4.create();
           mat4.identity(t);
           mat4.scale(t, t, [10,10,10]);//anchoredObject.scale);
           let r = mat4.create();
           mat4.multiply(r, anchorPose.transform.matrix, t);
 
-          //anchoredObject.matrix = anchorPose.transform.matrix;
-          anchoredObject.matrix = r;
+          anchoredObject.matrix = anchorPose.transform.matrix;
+          //anchoredObject.matrix = r;
         }
 
         if (!addedOne) {
@@ -439,7 +442,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           //const myGps = convertGpsToXyzw(latitude, longitude);
           //const targetGps = convertGpsToXyzw(interesting_lat, interesting_lon);
           //const distance = 1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon));
-          for (const [tlat, tlon] of models_at) {
+          for (const [tlat, tlon, tname] of models_at) {
             const gps_dist_harvesine = distHarvesine([latitude,longitude], [tlat,tlon]);
             const gps_bearing = gpsBearing([latitude,longitude], [tlat,tlon]); // 0 - sever, 360* podle hod. rucicek
 
@@ -460,6 +463,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             const coord_x = +Math.cos(gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
 
             document.querySelector('#uitext6').innerHTML += `${valToStr(gps_dist_harvesine)} ${valToStr(coord_z)} ${valToStr(coord_x)}, `
+
+            console.log(`${tname} ${gps_bearing} ${gps_bearing_norm} ${gps_dist_harvesine}`);
 
             //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -50, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             const anchorPose = new XRRigidTransform({x: coord_x, y: -1.55, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
