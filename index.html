@@ -668,9 +668,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
                   if (!requestedGps) {
                     geoFindMe();
+                    initXR();
                   }
-
-                  initXR();
                 });
                 sensor.addEventListener('error', error => {
                   if (event.error.name == 'NotReadableError') {
