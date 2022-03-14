@@ -669,6 +669,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                   if (!requestedGps) {
                     geoFindMe();
                   }
+
+                  initXR();
                 });
                 sensor.addEventListener('error', error => {
                   if (event.error.name == 'NotReadableError') {
@@ -683,9 +685,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                 document.querySelector('#uitext3').textContent = "No permissions.";
               }
         });
-
-      // Start the XR application.
-      initXR();
     </script>
   </body>
 </html>
