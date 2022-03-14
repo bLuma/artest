@@ -662,15 +662,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             .then(results => {
               if (results.every(result => result.state === "granted")) {
                 sensor = new AbsoluteOrientationSensor();
+                initXR();
+
                 sensor.addEventListener('reading', () => {
                   sensorquat = sensor.quaternion;
                   updateUIInfo();
 
                   if (!requestedGps) {
                     geoFindMe();
-                    initXR();
                   }
                 });
+
                 sensor.addEventListener('error', error => {
                   if (event.error.name == 'NotReadableError') {
                     document.querySelector('#uitext3').textContent ="AbsoluteOrientationSensor is not available.";
@@ -679,7 +681,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
                 sensor.start();
                 geoFindMe();
-
               } else {
                 document.querySelector('#uitext3').textContent = "No permissions.";
               }
