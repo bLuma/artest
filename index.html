@@ -37,9 +37,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         height: 400px;
         width: 100%;
       }
+
       #ui {
+        font-size: small;
         opacity: 0.6;
       }
+      
       #uiinner {
         background-color: black !important;
         color:white;
@@ -52,18 +55,49 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         width: 4em;
         text-align: right;
       }
+
+      #ui #toleft {
+        position: fixed;
+        left: 1ex;
+        top: 50%;
+      }
+
+      #ui #toright {
+        position: fixed;
+        right: 1ex;
+        top: 50%;
+      }
+
+      #ui .arrow-nav {
+        background-color: black;
+        padding: 1ex;
+        color: yellow;
+        font-size: x-large;
+        font-weight: bold;
+        z-index: 100;
+      }
+
+      #ui .arrow-nav-invis {
+        visibility: hidden;
+
+        background-color: black;
+        padding: 1ex;
+        color: yellow;
+        font-size: x-large;
+        font-weight: bold;
+        z-index: 100;
+      }
     </style>
   </head>
   <body>
     <header>
       <details open>
-        <a href="./ar/index.html">ar.js</a>
-          <!--<a class="back" href="./">Back</a>--> datetimehere
-
+        <!-- <a href="./ar/index.html">ar.js</a> -->
+        <!--<a class="back" href="./">Back</a>--> datetimehere
           <div id="map" class="map"></div>
-
       </details>
     </header>
+
     <div id="ui">
       <div id="uiinner">
         <div id="uitext">ui</div>
@@ -73,6 +107,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         <div id="uitext5">ui5</div>
         <div id="uitext6"></div>
         <!-- <button id="findme">GPS</button> -->
+        <div id="toleft" class="arrow-nav">&leftarrow;</div>
+        <div id="toright" class="arrow-nav">&rightarrow;</div>
       </div>
     </div>
 
@@ -219,7 +255,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         if (reticle.visible) {
           // Create an anchor.
           reticleHitTestResult.createAnchor().then((anchor) => {
-            addAnchoredObjectsToScene(anchor, 1);
+            // addAnchoredObjectsToScene(anchor, 1);
           }, (error) => {
             console.error("Could not create anchor: " + error);
           });
@@ -315,16 +351,34 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let phone_bearing = undefined;
 
       // kašna fei
-      const interesting_lat = 50.033978;
-      const interesting_lon = 15.767538;
+      let interesting_lat = 50.033978;
+      let interesting_lon = 15.767538;
+      let interesting_model = "kasna";
+      let interesting_idx = 0;
+      let interesting_data = [ [50.033978,15.767538,"kasna"] ];
 
-      const models_at = [/* kašna fei */ [50.033978,15.767538,"kasna"], /* u domu */ [50.050206, 15.771499,"udomu"], /* veselka test */ [50.036244, 15.770473,"veselka"], [50.04861604866441, 15.77152305442406,"kruhak"]];
+      const models_at = [/* kašna fei */ [50.033978,15.767538,"kasna"], /* u domu  [50.050206, 15.771499,"udomu"], */ /* veselka test */ [50.036244, 15.770473,"veselka"], [50.04861604866441, 15.77152305442406,"kruhak"]];
       //const models_at = [ [50.050206, 15.771499,"udomu"]];
 
       let addedOne = false;
 
       function updateUIInfo() {
         if (latitude !== undefined && longitude !== undefined && sensorquat !== undefined ) {
+          let minimum = interesting_idx;
+          let min_dist = distHarvesine([latitude,longitude], [interesting_lat,interesting_lon]);
+          let i = 0;
+          for (let model_data of models_at) {
+            let curr_dist = distHarvesine([latitude,longitude], [model_data[0],model_data[1]]);
+            if (curr_dist < min_dist) {
+              interesting_lat = model_data[0];
+              interesting_lon = model_data[1];
+              interesting_model = model_data[2];
+              interesting_idx = i;
+              interesting_data = [ model_data ];
+            }
+            i++;
+          }
+
           const gps_dy = interesting_lat-latitude;
           const gps_dx = Math.cos(Math.PI/180.0*latitude) * (interesting_lon-longitude);
           const gps_angle = Math.atan2(gps_dy, gps_dx);
@@ -350,11 +404,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           phone_bearing = 360 - (yaw_ori < 0 ? (180-Math.abs(yaw_ori)) + 180 : yaw_ori);
 
           document.querySelector('#uitext2').innerHTML = `gps: ${latitude} ° | ${longitude} °` +
-            `<br>gpsxyz[km]: ${quatToStr(convertGpsToXyzw(latitude, longitude))}` +
-            `<br>TARxyz[km]: ${quatToStr(convertGpsToXyzw(interesting_lat, interesting_lon))}` +
+            // `<br>gpsxyz[km]: ${quatToStr(convertGpsToXyzw(latitude, longitude))}` +
+            // `<br>TARxyz[km]: ${quatToStr(convertGpsToXyzw(interesting_lat, interesting_lon))}` +
             `<br>TARdist[m]: ${valToStr(1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon)))} | ${valToStr(gps_dist_harvesine)}` +
             `<br>GpsAngle: ${valToStr(gps_angle)} | ${valToStr(gps_angle_deg)} | ${valToStr(gps_bearing)}` + 
-            `<br>Bearing: ${valToStr(360 - (yaw_ori < 0 ? (180-Math.abs(yaw_ori)) + 180 : yaw_ori))}`;
+            `<br>Bearing: ${valToStr(360 - (yaw_ori < 0 ? (180-Math.abs(yaw_ori)) + 180 : yaw_ori))}` +
+            `<br>Model: ${interesting_model}`;
 
 
           // roll 90 mobil vertikalne, 0 mobil lezi, 180 mobil kouka nahoru
@@ -363,6 +418,16 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
           document.querySelector('#uitext3').innerHTML = "AOS: " + quatToStr(sensorquat);
           document.querySelector('#uitext4').innerHTML = "RPY(XYZ): " + quatToStr([roll*180/Math.PI, pitch*180/Math.PI, yaw*180/Math.PI, 0]);          
+
+          let tar_gps_bearing = gpsBearing([latitude, longitude], [interesting_lat, interesting_lon]) - phone_bearing; // 0 - sever, 360* podle hod. rucicek
+          if (tar_gps_bearing < 0)
+            tar_gps_bearing += 360;
+
+          let to_right = tar_gps_bearing >= 10 && tar_gps_bearing < 180;
+          let to_left = tar_gps_bearing >= 180 && tar_gps_bearing < 350;
+          document.querySelector("#toleft").className = to_left ? "arrow-nav" : "arrow-nav-invis";
+          document.querySelector("#toright").className = to_right ? "arrow-nav" : "arrow-nav-invis";
+
         }
 
         if (devori !== undefined) {
@@ -377,8 +442,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         let oriDeg = "";
 
         document.querySelector('#uitext').innerHTML = '' + 
-            (pose && pose.transform ? "Pos: " + pointToStr(pose.transform.position) : "") + '<br>' +
-            (pose && pose.transform ? "Ori: " + pointToStr(pose.transform.orientation) + "<br>" + oriDeg  : "");
+            (pose && pose.transform ? "ViewPos: " + pointToStr(pose.transform.position) : "") + '<br>' +
+            (pose && pose.transform ? "ViewOri: " + pointToStr(pose.transform.orientation) + "<br>" + oriDeg  : "");
 
         updateUIInfo();
 
@@ -410,7 +475,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
           let t = mat4.create();
           mat4.identity(t);
-          const scaleCoef = 0.1;
+          const scaleCoef = 1; // 0.1;
           mat4.scale(t, t, [scaleCoef, scaleCoef, scaleCoef]); //anchoredObject.scale);
           let r = mat4.create();
 
@@ -446,7 +511,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           //const distance = 1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon));
 
 
-          for (const [tlat, tlon, tname] of models_at) {
+          for (const [tlat, tlon, tname] of interesting_data) {
             const gps_dist_harvesine = distHarvesine([latitude,longitude], [tlat,tlon]);
             let gps_bearing = gpsBearing([latitude,longitude], [tlat,tlon]) - phone_bearing; // 0 - sever, 360* podle hod. rucicek
             if (gps_bearing < 0)
@@ -478,7 +543,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             console.log(`${tname} ${gps_bearing} BearNorm:${gps_bearing_norm} BearNormRad:${gps_bearing_norm_rad} Quadrant:${gps_bearing_quadrant} zInv:${z_invert} xInv:${x_invert} Dist:${gps_dist_harvesine} X:${coord_x} Z:${coord_z}`);
 
             //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -5, w: 1}, {x: 0, y: 0, z: 0, w: 1});
-            const anchorPose = new XRRigidTransform({x: coord_x, y: 0 /*-1.55*/, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
+            const anchorPose = new XRRigidTransform({x: coord_x, y: -20, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
               addAnchoredObjectsToScene(anchor, 1000);
             }, (error) => {
