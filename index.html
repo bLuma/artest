@@ -660,7 +660,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                   navigator.permissions.query({ name: "magnetometer" }),
                   navigator.permissions.query({ name: "gyroscope" })])
             .then(results => {
-              if (results.every(result => result.state === "granted")) {
+              // if (results.every(result => result.state === "granted")) {
                 sensor = new AbsoluteOrientationSensor();
                 initXR();
 
@@ -681,9 +681,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
                 sensor.start();
                 geoFindMe();
-              } else {
-                document.querySelector('#uitext3').textContent = "No permissions.";
-              }
+              // } else {
+              //   document.querySelector('#uitext3').textContent = "No permissions.";
+              // }
         });
     </script>
   </body>
