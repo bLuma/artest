@@ -346,7 +346,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let latitude = undefined;
       let longitude = undefined;
       let sensorquat = undefined;
-      let devori = undefined;
+      // let devori = undefined;
       let yaw_ori = undefined;
       let phone_bearing = undefined;
 
@@ -430,9 +430,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         }
 
-        if (devori !== undefined) {
-            document.querySelector('#uitext5').innerHTML = "DevOri: " + quatToStr([devori.alpha, devori.beta, devori.gamma, 0]);          
-        }
+        // if (devori !== undefined) {
+        //     document.querySelector('#uitext5').innerHTML = "DevOri: " + quatToStr([devori.alpha, devori.beta, devori.gamma, 0]);          
+        // }
       }
 
       // Called every time a XRSession requests that a new frame be drawn.
@@ -649,19 +649,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       //document.querySelector('#findme').addEventListener('click', geoFindMe);
 
-      window.addEventListener('deviceorientation', (e) => {
-        devori = e;
-      });
+      // window.addEventListener('deviceorientation', (e) => {
+      //   devori = e;
+      // });
 
 
-      const sensor = new AbsoluteOrientationSensor();
+      let sensor = undefined;
       Promise.all([navigator.permissions.query({ name: "geolocation" }), 
                   navigator.permissions.query({ name: "accelerometer" }),
                   navigator.permissions.query({ name: "magnetometer" }),
                   navigator.permissions.query({ name: "gyroscope" })])
             .then(results => {
               if (results.every(result => result.state === "granted")) {
-
+                sensor = new AbsoluteOrientationSensor();
                 sensor.addEventListener('reading', () => {
                   sensorquat = sensor.quaternion;
                   updateUIInfo();
