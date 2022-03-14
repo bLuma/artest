@@ -473,17 +473,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             // console.log(anchoredObject.matrix)
           // console.log(anchor, anchor.anchorSpace, xrRefSpace, anchorPose)
 
-          let t = mat4.create();
-          mat4.identity(t);
+          let tt = mat4.create();
+          mat4.identity(tt);
+          mat4.rotateY(tt, tt, t / 600.0);
+          mat4.translate(tt, tt, [0, -20, 0]);
           const scaleCoef = 1; // 0.1;
-          mat4.scale(t, t, [scaleCoef, scaleCoef, scaleCoef]); //anchoredObject.scale);
-          let r = mat4.create();
+          mat4.scale(tt, tt, [scaleCoef, scaleCoef, scaleCoef]); //anchoredObject.scale);
+          let rr = mat4.create();
 
-          // console.log(t)
-          mat4.multiply(r, anchorPose.transform.matrix, t);
-
+          mat4.multiply(rr, anchorPose.transform.matrix, tt);
+          
           //anchoredObject.matrix = anchorPose.transform.matrix;
-          anchoredObject.matrix = r;
+          anchoredObject.matrix = rr;
           // console.log(anchoredObject.matrix)
           // console.log(anchoredObject.matrix)
         }
@@ -543,7 +544,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             console.log(`${tname} ${gps_bearing} BearNorm:${gps_bearing_norm} BearNormRad:${gps_bearing_norm_rad} Quadrant:${gps_bearing_quadrant} zInv:${z_invert} xInv:${x_invert} Dist:${gps_dist_harvesine} X:${coord_x} Z:${coord_z}`);
 
             //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -5, w: 1}, {x: 0, y: 0, z: 0, w: 1});
-            const anchorPose = new XRRigidTransform({x: coord_x, y: -20, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
+            const anchorPose = new XRRigidTransform({x: coord_x, y: 0, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
               addAnchoredObjectsToScene(anchor, 1000);
             }, (error) => {
