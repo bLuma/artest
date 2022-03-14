@@ -476,7 +476,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           let tt = mat4.create();
           mat4.identity(tt);
           mat4.rotateY(tt, tt, t / 600.0);
-          mat4.translate(tt, tt, [0, -20, 0]);
+          mat4.translate(tt, tt, [0, -0.1, 0]);
           const scaleCoef = 1; // 0.1;
           mat4.scale(tt, tt, [scaleCoef, scaleCoef, scaleCoef]); //anchoredObject.scale);
           let rr = mat4.create();
