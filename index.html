@@ -643,7 +643,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           document.querySelector('#uitext2').textContent = 'GPS is not supported by your browser';
         } else {
           requestedGps = true;
-          navigator.geolocation.getCurrentPosition(success, error);
+          navigator.geolocation.getCurrentPosition(success, error, {enableHighAccuracy:true, maximumAge:1000});
         }
 
       }
