@@ -402,6 +402,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           yaw_ori = yaw*180/Math.PI;
 
           phone_bearing = 360 - (yaw_ori < 0 ? (180-Math.abs(yaw_ori)) + 180 : yaw_ori);
+          if (map_view != null) {
+            map_view.setRotation((360-phone_bearing)*Math.PI/180.0);
+          }
 
           document.querySelector('#uitext2').innerHTML = `gps: ${latitude} ° | ${longitude} °` +
             // `<br>gpsxyz[km]: ${quatToStr(convertGpsToXyzw(latitude, longitude))}` +
@@ -630,7 +633,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
           } else {
             // console.log(mapp.view)
-            map_view.setRotation((360-phone_bearing)*Math.PI/180.0);
+            //map_view.setRotation((360-phone_bearing)*Math.PI/180.0);
           }
         }
 
