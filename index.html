@@ -571,7 +571,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           latitude  = position.coords.latitude;
           longitude = position.coords.longitude;
 
-          requestedGps = false;
+          //requestedGps = false;
 
           if (mapp === undefined) {
 
@@ -642,8 +642,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         if(!navigator.geolocation) {
           document.querySelector('#uitext2').textContent = 'GPS is not supported by your browser';
         } else {
-          requestedGps = true;
-          navigator.geolocation.getCurrentPosition(success, error, {enableHighAccuracy:true, maximumAge:0});
+          if (!requestedGps) {
+            requestedGps = true;
+            //navigator.geolocation.getCurrentPosition(success, error, {enableHighAccuracy:true, maximumAge:0, timeout:600000});
+            navigator.geolocation.watchPosition(success, error, {enableHighAccuracy:true, maximumAge:0, timeout:600000});
+          }
         }
 
       }
