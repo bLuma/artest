@@ -30,6 +30,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
     <link rel='icon' type='image/png' sizes='96x96' href='favicon-96x96.png'>
     <link rel='stylesheet' href='css/common.css'>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.13.0/css/ol.css" type="text/css">
+    <script src="./js/kalman-filter.min.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/openlayers/openlayers.github.io@master/en/v6.13.0/build/ol.js"></script>
     <title>AR test</title>
     <style>
@@ -121,6 +122,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import {DropShadowNode} from './js/render/nodes/drop-shadow.js';
       import {vec3,mat4} from './js/render/math/gl-matrix.js';
       import {Ray} from './js/render/math/ray.js';
+
+      console.log(kalmanFilter);
 
       // XR globals.
       let xrButton = null;
@@ -350,6 +353,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let yaw_ori = undefined;
       let phone_bearing = undefined;
 
+      let kalman_sensor = new kalmanFilter.KalmanFilter({observation: 4});
+      let kalman_sensor_last = null;
+
       // kašna fei
       let interesting_lat = 50.033978;
       let interesting_lon = 15.767538;
@@ -361,6 +367,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       //const models_at = [ [50.050206, 15.771499,"udomu"]];
 
       let addedOne = false;
+
+      let kalman_gps = new kalmanFilter.KalmanFilter({observation: 2});
+      let kalman_gps_last = null;
 
       function updateUIInfo() {
         if (latitude !== undefined && longitude !== undefined && sensorquat !== undefined ) {
@@ -544,7 +553,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
             document.querySelector('#uitext6').innerHTML += `${valToStr(gps_dist_harvesine)} ${valToStr(coord_z)} ${valToStr(coord_x)}, `
 
-            console.log(`${tname} ${gps_bearing} BearNorm:${gps_bearing_norm} BearNormRad:${gps_bearing_norm_rad} Quadrant:${gps_bearing_quadrant} zInv:${z_invert} xInv:${x_invert} Dist:${gps_dist_harvesine} X:${coord_x} Z:${coord_z}`);
+            // console.log(`${tname} ${gps_bearing} BearNorm:${gps_bearing_norm} BearNormRad:${gps_bearing_norm_rad} Quadrant:${gps_bearing_quadrant} zInv:${z_invert} xInv:${x_invert} Dist:${gps_dist_harvesine} X:${coord_x} Z:${coord_z}`);
 
             //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -5, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             const anchorPose = new XRRigidTransform({x: coord_x, y: 0, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
@@ -566,36 +575,41 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       
 
       let requestedGps = false;
-      let mapp = undefined;
+      let map_object = undefined;
       let map_view = undefined;
-      let my_feature = undefined;
+      let feature_phone_location_map_marker = undefined;
       function geoFindMe() {
 
         function success(position) {
-          latitude  = position.coords.latitude;
-          longitude = position.coords.longitude;
+          const observation = [position.coords.latitude, position.coords.longitude];
+          kalman_gps_last = kalman_gps.filter({kalman_gps_last, observation});
+
+          // latitude  = position.coords.latitude;
+          // longitude = position.coords.longitude;
+          latitude = kalman_gps_last.mean[0][0];
+          longitude = kalman_gps_last.mean[1][0];
 
           //requestedGps = false;
 
-          if (mapp === undefined) {
+          if (map_object === undefined) {
 
-            const features = [];
-            const features2 = [];
+            const features_my_layer = [];
+            const features_target_layer = [];
             
-            features2.push(new ol.Feature({
+            features_my_layer.push(feature_phone_location_map_marker = new ol.Feature({
               geometry: new ol.geom.Point(ol.proj.fromLonLat([longitude, latitude])),
               name: 'ME',
             }));
 
             // const models_at = [/* kašna fei */ [50.033978,15.767538], /* u domu */ [50.050206, 15.771499], /* veselka test */ [50.036244, 15.770473],];
             for (const [tlat, tlon, tname] of models_at) {
-              features.push(my_feature = new ol.Feature({
+              features_target_layer.push(new ol.Feature({
                 geometry: new ol.geom.Point(ol.proj.fromLonLat([tlon,tlat])),
                 name: tname,
               }));
             }
 
-            mapp = new ol.Map({
+            map_object = new ol.Map({
               target: 'map',
               layers: [
                 new ol.layer.Tile({
@@ -603,20 +617,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                 }),
                 new ol.layer.Vector({
                   source: new ol.source.Vector({
-                    features: features2
+                    features: features_my_layer
                   }),
                   style: new ol.style.Style({
                     image: new ol.style.Icon({
-                      //anchor: [0.5, 46],
-                      //anchorXUnits: 'fraction',
-                      //anchorYUnits: 'pixels',
                       src: './media/marker2.png'
                     })
                   })
                 }),                
                 new ol.layer.Vector({
                   source: new ol.source.Vector({
-                    features: features
+                    features: features_target_layer
                   }),
                   style: new ol.style.Style({
                     image: new ol.style.Icon({
@@ -631,13 +642,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
               }))
             });
 
-
+            window.map = map_object;
           } else {
-            if (my_feature != undefined) {
-              my_feature.geometry = new ol.geom.Point(ol.proj.fromLonLat([longitude, latitude]));
+            if (feature_phone_location_map_marker != undefined) {
+              feature_phone_location_map_marker.geometry = new ol.geom.Point(ol.proj.fromLonLat([longitude, latitude]));
+              map.getAllLayers()[1].setSource(new ol.source.Vector({
+                    features: [feature_phone_location_map_marker]
+              }));
+
+              map_object.setView(map_view = new ol.View({
+                center: ol.proj.fromLonLat([longitude, latitude]),
+                zoom: 18
+              }));
+
+              map_view.setRotation((360-phone_bearing)*Math.PI/180.0);
             }
-            // console.log(mapp.view)
-            //map_view.setRotation((360-phone_bearing)*Math.PI/180.0);
           }
         }
 
@@ -676,7 +695,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                 initXR();
 
                 sensor.addEventListener('reading', () => {
-                  sensorquat = sensor.quaternion;
+                  const observation = [sensor.quaternion[0],sensor.quaternion[1],sensor.quaternion[2],sensor.quaternion[3]];
+                  kalman_sensor_last = kalman_sensor.filter({kalman_sensor_last, observation});
+
+                  //sensorquat = sensor.quaternion;
+                  sensorquat = [kalman_sensor_last.mean[0][0],kalman_sensor_last.mean[1][0],kalman_sensor_last.mean[2][0],kalman_sensor_last.mean[3][0]];
                   updateUIInfo();
 
                   if (!requestedGps) {
