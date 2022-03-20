@@ -122,8 +122,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       import {DropShadowNode} from './js/render/nodes/drop-shadow.js';
       import {vec3,mat4} from './js/render/math/gl-matrix.js';
       import {Ray} from './js/render/math/ray.js';
+      import Decimal from './js/decimal.module.js';
 
-      console.log(kalmanFilter);
+      // console.log(kalmanFilter);
+      // console.log(Decimal);
+
+      Decimal.set({ precision: 50 });
 
       // XR globals.
       let xrButton = null;
@@ -225,6 +229,18 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         xrHitTestSource.cancel();
         xrHitTestSource = null;
         session.end();
+
+        latitude = undefined;
+        longitude = undefined;
+        sensorquat = undefined;
+        yaw_ori = undefined;
+        phone_bearing = undefined;
+        kalman_sensor = new kalmanFilter.KalmanFilter({observation: 4});
+        kalman_sensor_last = null;
+        added_one = false;
+        kalman_gps = new kalmanFilter.KalmanFilter({observation: 2});
+        kalman_gps_last = null;
+        added_or_updated_at = undefined;
       }
 
       function onSessionEnded(event) {
@@ -233,23 +249,26 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
       const MAX_ANCHORED_OBJECTS = 30;
       let anchoredObjects = [];
-      function addAnchoredObjectsToScene(anchor, scale) {
-        let flower = new Gltf2Node({url: 'media/gltf/pardubice_veselka/test.glb'}); //  'media/gltf/pardubice_veselka/model01.glb'});
-        flower.scale = [scale, scale, scale];
-        scene.addNode(flower);
+
+      function addAnchoredObjectsToScene(anchor) {
+        let ar_object = new Gltf2Node({url: 'media/gltf/pardubice_veselka/test.glb'}); //  'media/gltf/pardubice_veselka/model01.glb'});
+        // ar_object.scale = [scale, scale, scale];
+        
+        scene.addNode(ar_object);
+        
         anchoredObjects.push({
-          anchoredObject: flower,
+          anchoredObject: ar_object,
           anchor: anchor
         });
 
         // For performance reasons if we add too many objects start
         // removing the oldest ones to keep the scene complexity
         // from growing too much.
-        if (anchoredObjects.length > MAX_ANCHORED_OBJECTS) {
-          let objectToRemove = anchoredObjects.shift();
-          scene.removeNode(objectToRemove.anchoredObject);
-          objectToRemove.anchor.delete();
-        }
+        // if (anchoredObjects.length > MAX_ANCHORED_OBJECTS) {
+        //   let objectToRemove = anchoredObjects.shift();
+        //   scene.removeNode(objectToRemove.anchoredObject);
+        //   objectToRemove.anchor.delete();
+        // }
       }
 
       let rayOrigin = vec3.create();
@@ -337,39 +356,53 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         const lambda1 = lon1;
         const lambda2 = lon2;
 
-        const y = Math.sin(lambda2-lambda1) * Math.cos(theta2);
-        const x = Math.cos(theta1)*Math.sin(theta2) -
-                  Math.sin(theta1)*Math.cos(theta2)*Math.cos(lambda2-lambda1);
-        const angl = Math.atan2(y, x);
-        const brng = (angl*180/Math.PI + 360) % 360; // in degrees
+        const theta1d = new Decimal(theta1);
+        const theta2d = new Decimal(theta2);
+        const lambda1d = new Decimal(lambda1);
+        const lambda2d = new Decimal(lambda2);
 
-        return brng;
+        const y = lambda2d.sub(lambda1d).sin().mul(theta2d.cos());
+        const tmp = theta1d.sin().mul( theta2d.cos() ).mul( lambda2d.sub(lambda1d) );
+        const x = theta1d.cos().mul(theta2d.sin()).sub(tmp);
+        const angl = Decimal.atan2(x,y);
+        const brng = angl.mul(new Decimal(180)).div(Decimal.acos(-1)).add(new Decimal(360)).mod(new Decimal(360));
+
+        // const y = Math.sin(lambda2-lambda1) * Math.cos(theta2);
+        // const x = Math.cos(theta1)*Math.sin(theta2) - Math.sin(theta1)*Math.cos(theta2)*Math.cos(lambda2-lambda1);
+        // const angl = Math.atan2(y, x);
+        // const brng = (angl*180/Math.PI + 360) % 360; // in degrees
+
+        return brng.toNumber();
       }
 
       let latitude = undefined;
       let longitude = undefined;
+
+      let kalman_gps = new kalmanFilter.KalmanFilter({observation: 2});
+      let kalman_gps_last = null;
+
       let sensorquat = undefined;
-      // let devori = undefined;
       let yaw_ori = undefined;
       let phone_bearing = undefined;
 
       let kalman_sensor = new kalmanFilter.KalmanFilter({observation: 4});
       let kalman_sensor_last = null;
 
-      // kašna fei
       let interesting_lat = 50.033978;
       let interesting_lon = 15.767538;
       let interesting_model = "kasna";
       let interesting_idx = 0;
       let interesting_data = [ [50.033978,15.767538,"kasna"] ];
 
-      const models_at = [/* kašna fei */ [50.033978,15.767538,"kasna"], /* u domu  [50.050206, 15.771499,"udomu"], */ /* veselka test */ [50.036244, 15.770473,"veselka"], [50.04861604866441, 15.77152305442406,"kruhak"]];
-      //const models_at = [ [50.050206, 15.771499,"udomu"]];
+      const models_at = [/* kašna fei */ [50.033978,15.767538,"kasna"], /* u domu */ [50.0500327794709, 15.770857278140246,"udomu"],  /* veselka test */ [50.036244, 15.770473,"veselka"], [50.04861604866441, 15.77152305442406,"kruhak"]];
+      
+      let added_one = false;
+      let added_or_updated_at = undefined;
+      
+      // let devori = undefined;
 
-      let addedOne = false;
-
-      let kalman_gps = new kalmanFilter.KalmanFilter({observation: 2});
-      let kalman_gps_last = null;
+      // let kalman_bearing = new kalmanFilter.KalmanFilter({observation: 1});
+      // let kalman_bearing_last = null;
 
       function updateUIInfo() {
         if (latitude !== undefined && longitude !== undefined && sensorquat !== undefined ) {
@@ -411,6 +444,10 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           yaw_ori = yaw*180/Math.PI;
 
           phone_bearing = 360 - (yaw_ori < 0 ? (180-Math.abs(yaw_ori)) + 180 : yaw_ori);
+          // const observation = [phone_bearing];
+          // kalman_bearing_last = kalman_bearing.filter({kalman_bearing_last, observation});
+          // phone_bearing = kalman_bearing_last.mean[0][0];
+
           if (map_view != null) {
             map_view.setRotation((360-phone_bearing)*Math.PI/180.0);
           }
@@ -420,7 +457,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             // `<br>TARxyz[km]: ${quatToStr(convertGpsToXyzw(interesting_lat, interesting_lon))}` +
             `<br>TARdist[m]: ${valToStr(1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon)))} | ${valToStr(gps_dist_harvesine)}` +
             `<br>GpsAngle: ${valToStr(gps_angle)} | ${valToStr(gps_angle_deg)} | ${valToStr(gps_bearing)}` + 
-            `<br>Bearing: ${valToStr(360 - (yaw_ori < 0 ? (180-Math.abs(yaw_ori)) + 180 : yaw_ori))}` +
+            `<br>Bearing: ${valToStr(phone_bearing)}` +
             `<br>Model: ${interesting_model}`;
 
 
@@ -457,7 +494,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             (pose && pose.transform ? "ViewPos: " + pointToStr(pose.transform.position) : "") + '<br>' +
             (pose && pose.transform ? "ViewOri: " + pointToStr(pose.transform.orientation) + "<br>" + oriDeg  : "");
 
-        updateUIInfo();
+        //updateUIInfo();
 
         reticle.visible = false;
 
@@ -482,17 +519,17 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           const anchorPose = frame.getPose(anchor.anchorSpace, xrRefSpace);
           if (anchorPose === undefined || anchorPose === null)
             continue;
-            // console.log(anchoredObject.matrix)
+          
+          // console.log(anchoredObject.matrix)
           // console.log(anchor, anchor.anchorSpace, xrRefSpace, anchorPose)
 
           let tt = mat4.create();
           mat4.identity(tt);
-          mat4.rotateY(tt, tt, t / 600.0);
-          mat4.translate(tt, tt, [0, -0.1, 0]);
-          const scaleCoef = 1; // 0.1;
-          mat4.scale(tt, tt, [scaleCoef, scaleCoef, scaleCoef]); //anchoredObject.scale);
+          mat4.rotateY(tt, tt, /*t / 600.0*/ Math.PI*3/2);
+          // mat4.translate(tt, tt, [0, -0.1, 0]);
+          // const scaleCoef = 1; // 0.1;
+          // mat4.scale(tt, tt, [scaleCoef, scaleCoef, scaleCoef]); //anchoredObject.scale);
           let rr = mat4.create();
-
           mat4.multiply(rr, anchorPose.transform.matrix, tt);
           
           //anchoredObject.matrix = anchorPose.transform.matrix;
@@ -501,7 +538,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           // console.log(anchoredObject.matrix)
         }
 
-        if (!addedOne) {
+
+        const current_timestamp = +new Date();
+        if (!added_one || current_timestamp >= added_or_updated_at + 100) {
           // +z k uzivateli, -z od uzivatele
           // +x doprava, -x doleva
           // +y nahoru, -y dolu
@@ -530,40 +569,65 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             if (gps_bearing < 0)
               gps_bearing += 360;
 
-            const gps_bearing_rad = gps_bearing * Math.PI / 180.0;
-            //
+
             const gps_bearing_norm = gps_bearing >= 270 ? gps_bearing - 270 : (gps_bearing >= 180 ? gps_bearing - 180 : (gps_bearing >= 90 ? gps_bearing - 90 : gps_bearing));
             const gps_bearing_quadrant = gps_bearing >= 270 ? 3 : (gps_bearing >= 180 ? 2 : (gps_bearing >= 90 ? 1 : 0));
-            const gps_bearing_norm_rad = gps_bearing_norm * Math.PI / 180.0; 
+            const gps_bearing_norm_rad = (new Decimal(gps_bearing_norm)).mul(Decimal.acos(-1)).div(180.0);
 
             const z_invert = (gps_bearing_quadrant === 1 || gps_bearing_quadrant === 2) ? -1 : 1;
             const x_invert = (gps_bearing_quadrant >= 2) ? -1 : 1;
 
-            // sin bear = -z / dist
-            // cos bear = +x / dist
-            // -Z = sin bear * dist 
-            // +x = cos  bear * dist
-            let coord_z = -Math.cos(gps_bearing_norm_rad) * gps_dist_harvesine * z_invert;
-            let coord_x = +Math.sin(gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
+            let coord_z = gps_bearing_norm_rad.cos().neg().mul(gps_dist_harvesine).mul(z_invert);
+            let coord_x = gps_bearing_norm_rad.sin().mul(gps_dist_harvesine).mul(x_invert);
 
             if (gps_bearing_quadrant == 3) {
-               coord_z = -Math.cos(Math.PI/2-gps_bearing_norm_rad) * gps_dist_harvesine;
-               coord_x = -Math.sin(Math.PI/2-gps_bearing_norm_rad) * gps_dist_harvesine;
+               const pihalf = Decimal.acos(-1).div(2);
+               coord_z = pihalf.sub(gps_bearing_norm_rad).cos().neg().mul(gps_dist_harvesine);
+               coord_x = pihalf.sub(gps_bearing_norm_rad).sin().neg().mul(gps_dist_harvesine);
              }
 
-            document.querySelector('#uitext6').innerHTML += `${valToStr(gps_dist_harvesine)} ${valToStr(coord_z)} ${valToStr(coord_x)}, `
+            coord_x = coord_x.toNumber();
+            coord_z = coord_z.toNumber();
+
+            // const gps_bearing_rad = gps_bearing * Math.PI / 180.0;
+            // //
+            // const gps_bearing_norm = gps_bearing >= 270 ? gps_bearing - 270 : (gps_bearing >= 180 ? gps_bearing - 180 : (gps_bearing >= 90 ? gps_bearing - 90 : gps_bearing));
+            // const gps_bearing_quadrant = gps_bearing >= 270 ? 3 : (gps_bearing >= 180 ? 2 : (gps_bearing >= 90 ? 1 : 0));
+            // const gps_bearing_norm_rad = gps_bearing_norm * Math.PI / 180.0; 
+
+            // const z_invert = (gps_bearing_quadrant === 1 || gps_bearing_quadrant === 2) ? -1 : 1;
+            // const x_invert = (gps_bearing_quadrant >= 2) ? -1 : 1;
+
+            // // sin bear = -z / dist
+            // // cos bear = +x / dist
+            // // -Z = sin bear * dist 
+            // // +x = cos  bear * dist
+            // let coord_z = -Math.cos(gps_bearing_norm_rad) * gps_dist_harvesine * z_invert;
+            // let coord_x = +Math.sin(gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
+
+            // if (gps_bearing_quadrant == 3) {
+            //    coord_z = -Math.cos(Math.PI/2-gps_bearing_norm_rad) * gps_dist_harvesine;
+            //    coord_x = -Math.sin(Math.PI/2-gps_bearing_norm_rad) * gps_dist_harvesine;
+            //  }
+
+            document.querySelector('#uitext6').innerHTML = `${valToStr(gps_dist_harvesine)} ${valToStr(gps_bearing)} ${valToStr(coord_z)} ${valToStr(coord_x)}, `
 
             // console.log(`${tname} ${gps_bearing} BearNorm:${gps_bearing_norm} BearNormRad:${gps_bearing_norm_rad} Quadrant:${gps_bearing_quadrant} zInv:${z_invert} xInv:${x_invert} Dist:${gps_dist_harvesine} X:${coord_x} Z:${coord_z}`);
 
             //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -5, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             const anchorPose = new XRRigidTransform({x: coord_x, y: 0, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
-              addAnchoredObjectsToScene(anchor, 1000);
+              if (added_one) {
+                anchoredObjects[0].anchor = anchor;
+              } else {
+                addAnchoredObjectsToScene(anchor);
+                added_one = true;
+              }
+              added_or_updated_at = +new Date();
             }, (error) => {
               document.querySelector('#uitext6').innerHTML = ("Could not create anchor: " + error);
             });
           }
-          addedOne = true;
         }
 
         scene.startFrame();
@@ -581,13 +645,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       function geoFindMe() {
 
         function success(position) {
-          const observation = [position.coords.latitude, position.coords.longitude];
+          const gps_scale_coef = 10000.0;
+          const observation = [position.coords.latitude*gps_scale_coef, position.coords.longitude*gps_scale_coef];
           kalman_gps_last = kalman_gps.filter({kalman_gps_last, observation});
 
           // latitude  = position.coords.latitude;
           // longitude = position.coords.longitude;
-          latitude = kalman_gps_last.mean[0][0];
-          longitude = kalman_gps_last.mean[1][0];
+          latitude = kalman_gps_last.mean[0][0]/gps_scale_coef;
+          longitude = kalman_gps_last.mean[1][0]/gps_scale_coef;
 
           //requestedGps = false;
 
@@ -601,7 +666,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
               name: 'ME',
             }));
 
-            // const models_at = [/* kašna fei */ [50.033978,15.767538], /* u domu */ [50.050206, 15.771499], /* veselka test */ [50.036244, 15.770473],];
             for (const [tlat, tlon, tname] of models_at) {
               features_target_layer.push(new ol.Feature({
                 geometry: new ol.geom.Point(ol.proj.fromLonLat([tlon,tlat])),
@@ -695,11 +759,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
                 initXR();
 
                 sensor.addEventListener('reading', () => {
-                  const observation = [sensor.quaternion[0],sensor.quaternion[1],sensor.quaternion[2],sensor.quaternion[3]];
+                  const sensor_scale_coef = 10.0;
+                  const observation = [sensor.quaternion[0]*sensor_scale_coef,sensor.quaternion[1]*sensor_scale_coef,sensor.quaternion[2]*sensor_scale_coef,sensor.quaternion[3]*sensor_scale_coef];
                   kalman_sensor_last = kalman_sensor.filter({kalman_sensor_last, observation});
 
                   //sensorquat = sensor.quaternion;
-                  sensorquat = [kalman_sensor_last.mean[0][0],kalman_sensor_last.mean[1][0],kalman_sensor_last.mean[2][0],kalman_sensor_last.mean[3][0]];
+                  sensorquat = [kalman_sensor_last.mean[0][0]/sensor_scale_coef,kalman_sensor_last.mean[1][0]/sensor_scale_coef,kalman_sensor_last.mean[2][0]/sensor_scale_coef,kalman_sensor_last.mean[3][0]/sensor_scale_coef];
                   updateUIInfo();
 
                   if (!requestedGps) {
