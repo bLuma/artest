@@ -141,6 +141,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       let scene = new Scene();
       scene.enableStats(false);
 
+      let anchoredObjects = [];
+
       // let arObject = new Node();
       // arObject.visible = false;
       // scene.addNode(arObject);
@@ -247,12 +249,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         xrButton.setSession(null);
       }
 
-      const MAX_ANCHORED_OBJECTS = 30;
-      let anchoredObjects = [];
-
       function addAnchoredObjectsToScene(anchor) {
         let ar_object = new Gltf2Node({url: 'media/gltf/pardubice_veselka/test.glb'}); //  'media/gltf/pardubice_veselka/model01.glb'});
-        // ar_object.scale = [scale, scale, scale];
         
         scene.addNode(ar_object);
         
@@ -260,15 +258,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           anchoredObject: ar_object,
           anchor: anchor
         });
-
-        // For performance reasons if we add too many objects start
-        // removing the oldest ones to keep the scene complexity
-        // from growing too much.
-        // if (anchoredObjects.length > MAX_ANCHORED_OBJECTS) {
-        //   let objectToRemove = anchoredObjects.shift();
-        //   scene.removeNode(objectToRemove.anchoredObject);
-        //   objectToRemove.anchor.delete();
-        // }
       }
 
       let rayOrigin = vec3.create();
@@ -423,8 +412,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
           const gps_dy = interesting_lat-latitude;
           const gps_dx = Math.cos(Math.PI/180.0*latitude) * (interesting_lon-longitude);
-          const gps_angle = Math.atan2(gps_dy, gps_dx);
-          const gps_angle_deg = gps_angle*180/Math.PI; // wrong???
+          // const gps_angle = Math.atan2(gps_dy, gps_dx);
+          // const gps_angle_deg = gps_angle*180/Math.PI; // wrong???
 
           const gps_dist_harvesine = distHarvesine([latitude,longitude], [interesting_lat,interesting_lon]);
           const gps_bearing = gpsBearing([latitude,longitude], [interesting_lat,interesting_lon]); // 0 - sever, 360* podle hod. rucicek
@@ -456,8 +445,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             // `<br>gpsxyz[km]: ${quatToStr(convertGpsToXyzw(latitude, longitude))}` +
             // `<br>TARxyz[km]: ${quatToStr(convertGpsToXyzw(interesting_lat, interesting_lon))}` +
             `<br>TARdist[m]: ${valToStr(1000*dist3d(convertGpsToXyzw(latitude, longitude), convertGpsToXyzw(interesting_lat, interesting_lon)))} | ${valToStr(gps_dist_harvesine)}` +
-            `<br>GpsAngle: ${valToStr(gps_angle)} | ${valToStr(gps_angle_deg)} | ${valToStr(gps_bearing)}` + 
-            `<br>Bearing: ${valToStr(phone_bearing)}` +
+            //`<br>GpsAngle: ${valToStr(gps_angle)} | ${valToStr(gps_angle_deg)} | ${valToStr(gps_bearing)}` + 
+            `<br>GpsAngle: ${valToStr(gps_bearing)}` + 
+            `<br>PhoneBearing: ${valToStr(phone_bearing)}` +
             `<br>Model: ${interesting_model}`;
 
 
@@ -488,7 +478,30 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       function onXRFrame(t, frame) {
         let session = frame.session;
         let pose = frame.getViewerPose(xrRefSpace);
+        if (!pose || !pose.transform || !pose.transform.orientation) {
+          session.requestAnimationFrame(onXRFrame);
+          return;
+        }
         let oriDeg = "";
+
+        const [qx, qy, qz, qw] = [pose.transform.orientation.x, pose.transform.orientation.y, pose.transform.orientation.z, pose.transform.orientation.w];
+
+        const sinr_cosp = 2*(qw*qx + qy*qz);
+        const cosr_cosp = 1 - 2*(qx*qx + qy*qy);
+        const roll = Math.atan2(sinr_cosp, cosr_cosp);
+
+        const sinp = 2*(qw*qy-qz*qx);
+        const pitch = Math.abs(sinp) >= 1 ? Math.PI/2 * Math.sign(sinp) : Math.asin(sinp);
+
+        const siny_cosp = 2*(qw*qz + qx*qy);
+        const cosy_cosp = 1 - 2*(qy*qy + qz*qz);
+        const yaw = Math.atan2(siny_cosp, cosy_cosp);
+        const yaw_ori = yaw*180/Math.PI;
+
+        oriDeg += valToStr(roll) + " / " + valToStr(pitch) + " / " + valToStr(yaw);
+
+
+
 
         document.querySelector('#uitext').innerHTML = '' + 
             (pose && pose.transform ? "ViewPos: " + pointToStr(pose.transform.position) : "") + '<br>' +
@@ -532,8 +545,8 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
           let rr = mat4.create();
           mat4.multiply(rr, anchorPose.transform.matrix, tt);
           
-          //anchoredObject.matrix = anchorPose.transform.matrix;
-          anchoredObject.matrix = rr;
+          anchoredObject.matrix = anchorPose.transform.matrix;
+          //anchoredObject.matrix = rr;
           // console.log(anchoredObject.matrix)
           // console.log(anchoredObject.matrix)
         }
@@ -589,6 +602,13 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             coord_x = coord_x.toNumber();
             coord_z = coord_z.toNumber();
 
+            const nangle = pitch;
+            const nx = coord_x*Math.cos(nangle)+coord_z*Math.sin(nangle);
+            const nz = -(coord_x*Math.sin(nangle)-coord_z*Math.cos(nangle));
+
+            coord_x = nx;
+            coord_z = nz;
+
             // const gps_bearing_rad = gps_bearing * Math.PI / 180.0;
             // //
             // const gps_bearing_norm = gps_bearing >= 270 ? gps_bearing - 270 : (gps_bearing >= 180 ? gps_bearing - 180 : (gps_bearing >= 90 ? gps_bearing - 90 : gps_bearing));
@@ -618,14 +638,21 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             const anchorPose = new XRRigidTransform({x: coord_x, y: 0, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
             frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
               if (added_one) {
+                //scene.removeNode(anchoredObjects[0].anchoredObject);
+
+                if (anchoredObjects[0].anchor != undefined) {
+                  anchoredObjects[0].anchor.delete();
+                }
+                //anchoredObjects = [];
                 anchoredObjects[0].anchor = anchor;
+                //addAnchoredObjectsToScene(anchor);
               } else {
                 addAnchoredObjectsToScene(anchor);
                 added_one = true;
               }
               added_or_updated_at = +new Date();
             }, (error) => {
-              document.querySelector('#uitext6').innerHTML = ("Could not create anchor: " + error);
+              document.querySelector('#uitext6').innerHTML = "Could not create anchor: " + error;
             });
           }
         }
