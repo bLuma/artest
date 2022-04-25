@@ -246,6 +246,9 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
         kalman_matrix = new kalmanFilter.KalmanFilter({observation: 16});
         kalman_matrix_last = null;
+
+        is_user_ready = false;
+        was_in_front_of_user = undefined;
       }
 
       function onSessionEnded(event) {
@@ -393,6 +396,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
       
       let added_one = false;
       let added_or_updated_at = undefined;
+
+      let is_user_ready = false;
+      let was_in_front_of_user = undefined;
+
+      let start_pitch = undefined;
       
       // let devori = undefined;
 
@@ -480,6 +488,11 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
         // }
       }
 
+      
+      function make_ready() {
+        is_user_ready = true;
+      }
+
       // Called every time a XRSession requests that a new frame be drawn.
       function onXRFrame(t, frame) {
         let session = frame.session;
@@ -544,7 +557,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
           let tt = mat4.create();
           mat4.identity(tt);
-          mat4.rotateY(tt, tt, /*t / 600.0*/ pitch + Math.PI*3/2);
+          mat4.rotateY(tt, tt, /*t / 600.0*/ start_pitch + Math.PI*3/2);
           // mat4.translate(tt, tt, [0, -0.1, 0]);
           // const scaleCoef = 1; // 0.1;
           // mat4.scale(tt, tt, [scaleCoef, scaleCoef, scaleCoef]); //anchoredObject.scale);
@@ -631,25 +644,78 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             if (gps_bearing < 0)
               gps_bearing += 360;
 
+            // const gps_bearing_norm = gps_bearing >= 270 ? gps_bearing - 270 : (gps_bearing >= 180 ? gps_bearing - 180 : (gps_bearing >= 90 ? gps_bearing - 90 : gps_bearing));
+            // const gps_bearing_quadrant = gps_bearing >= 270 ? 3 : (gps_bearing >= 180 ? 2 : (gps_bearing >= 90 ? 1 : 0));
+            // const gps_bearing_norm_rad = (new Decimal(gps_bearing_norm)).mul(Decimal.acos(-1)).div(180.0);
 
+            // const z_invert = (gps_bearing_quadrant === 1 || gps_bearing_quadrant === 2) ? -1 : 1;
+            // const x_invert = (gps_bearing_quadrant >= 2) ? -1 : 1;
+
+            // let coord_z = gps_bearing_norm_rad.cos().neg().mul(gps_dist_harvesine).mul(z_invert);
+            // let coord_x = gps_bearing_norm_rad.sin().mul(gps_dist_harvesine).mul(x_invert);
+
+            // if (gps_bearing_quadrant == 3) {
+            //    const pihalf = Decimal.acos(-1).div(2);
+            //    coord_z = pihalf.sub(gps_bearing_norm_rad).cos().neg().mul(gps_dist_harvesine);
+            //    coord_x = pihalf.sub(gps_bearing_norm_rad).sin().neg().mul(gps_dist_harvesine);
+            //  }
+
+            // coord_x = coord_x.toNumber();
+            // coord_z = coord_z.toNumber();
+
+            // const nangle = pitch;
+            // const nx = coord_x*Math.cos(nangle)+coord_z*Math.sin(nangle);
+            // const nz = -(coord_x*Math.sin(nangle)-coord_z*Math.cos(nangle));
+
+            // coord_x = nx;
+            // coord_z = nz;
+
+            const gps_bearing_rad = gps_bearing * Math.PI / 180.0;
+            //
             const gps_bearing_norm = gps_bearing >= 270 ? gps_bearing - 270 : (gps_bearing >= 180 ? gps_bearing - 180 : (gps_bearing >= 90 ? gps_bearing - 90 : gps_bearing));
             const gps_bearing_quadrant = gps_bearing >= 270 ? 3 : (gps_bearing >= 180 ? 2 : (gps_bearing >= 90 ? 1 : 0));
-            const gps_bearing_norm_rad = (new Decimal(gps_bearing_norm)).mul(Decimal.acos(-1)).div(180.0);
+            const gps_bearing_norm_rad = gps_bearing_norm * Math.PI / 180.0; 
 
             const z_invert = (gps_bearing_quadrant === 1 || gps_bearing_quadrant === 2) ? -1 : 1;
             const x_invert = (gps_bearing_quadrant >= 2) ? -1 : 1;
 
-            let coord_z = gps_bearing_norm_rad.cos().neg().mul(gps_dist_harvesine).mul(z_invert);
-            let coord_x = gps_bearing_norm_rad.sin().mul(gps_dist_harvesine).mul(x_invert);
+            // +z k uzivateli, -z od uzivatele
+            // +x doprava, -x doleva
+            // +y nahoru, -y dolu
+            //
+            // - top-down view
+            //  3                 0 q.
+            //          | -z
+            //     X----|----X
+            //     | \An|An/ |
+            // ---------+----------
+            //  -x      |        +x  
+            //          |
+            //          | +z
+            //   2                1
+            // yaw  sever-0, zapad-90, vychod--90 
+            //
+
+            // sin bear = -z / dist
+            // cos bear = +x / dist
+            // -Z = sin bear * dist 
+            // +x = cos  bear * dist
+            let coord_z = -Math.cos(gps_bearing_norm_rad) * gps_dist_harvesine * z_invert;
+            let coord_x = +Math.sin(gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
 
             if (gps_bearing_quadrant == 3) {
-               const pihalf = Decimal.acos(-1).div(2);
-               coord_z = pihalf.sub(gps_bearing_norm_rad).cos().neg().mul(gps_dist_harvesine);
-               coord_x = pihalf.sub(gps_bearing_norm_rad).sin().neg().mul(gps_dist_harvesine);
-             }
+               coord_z = -Math.cos(Math.PI/2-gps_bearing_norm_rad) * gps_dist_harvesine * z_invert;
+               coord_x = +Math.sin(Math.PI/2-gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
+            }
 
-            coord_x = coord_x.toNumber();
-            coord_z = coord_z.toNumber();
+            // if (gps_bearing_quadrant == 2) {
+            //    coord_z = -Math.cos(-gps_bearing_norm_rad) * gps_dist_harvesine * z_invert;
+            //    coord_x = +Math.sin(-gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
+            // }
+            // if (gps_bearing_quadrant == 1 || gps_bearing_quadrant == 3) {
+            //    coord_z = -Math.cos(Math.PI/2-gps_bearing_norm_rad) * gps_dist_harvesine * z_invert;
+            //    coord_x = +Math.sin(Math.PI/2-gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
+            // }
 
             const nangle = pitch;
             const nx = coord_x*Math.cos(nangle)+coord_z*Math.sin(nangle);
@@ -658,51 +724,51 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
             coord_x = nx;
             coord_z = nz;
 
-            // const gps_bearing_rad = gps_bearing * Math.PI / 180.0;
-            // //
-            // const gps_bearing_norm = gps_bearing >= 270 ? gps_bearing - 270 : (gps_bearing >= 180 ? gps_bearing - 180 : (gps_bearing >= 90 ? gps_bearing - 90 : gps_bearing));
-            // const gps_bearing_quadrant = gps_bearing >= 270 ? 3 : (gps_bearing >= 180 ? 2 : (gps_bearing >= 90 ? 1 : 0));
-            // const gps_bearing_norm_rad = gps_bearing_norm * Math.PI / 180.0; 
+            const in_front_of_user = gps_bearing_quadrant === 0 || gps_bearing_quadrant === 3;
 
-            // const z_invert = (gps_bearing_quadrant === 1 || gps_bearing_quadrant === 2) ? -1 : 1;
-            // const x_invert = (gps_bearing_quadrant >= 2) ? -1 : 1;
-
-            // // sin bear = -z / dist
-            // // cos bear = +x / dist
-            // // -Z = sin bear * dist 
-            // // +x = cos  bear * dist
-            // let coord_z = -Math.cos(gps_bearing_norm_rad) * gps_dist_harvesine * z_invert;
-            // let coord_x = +Math.sin(gps_bearing_norm_rad) * gps_dist_harvesine * x_invert;
-
-            // if (gps_bearing_quadrant == 3) {
-            //    coord_z = -Math.cos(Math.PI/2-gps_bearing_norm_rad) * gps_dist_harvesine;
-            //    coord_x = -Math.sin(Math.PI/2-gps_bearing_norm_rad) * gps_dist_harvesine;
-            //  }
-
-            document.querySelector('#uitext6').innerHTML = `${valToStr(gps_dist_harvesine)} ${valToStr(gps_bearing)} ${valToStr(coord_z)} ${valToStr(coord_x)}, `
-
+            
             // console.log(`${tname} ${gps_bearing} BearNorm:${gps_bearing_norm} BearNormRad:${gps_bearing_norm_rad} Quadrant:${gps_bearing_quadrant} zInv:${z_invert} xInv:${x_invert} Dist:${gps_dist_harvesine} X:${coord_x} Z:${coord_z}`);
 
             //const anchorPose = new XRRigidTransform({x: 0, y: -1.55, z: -5, w: 1}, {x: 0, y: 0, z: 0, w: 1});
-            const anchorPose = new XRRigidTransform({x: coord_x, y: 0, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
-            frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
-              if (added_one) {
-                //scene.removeNode(anchoredObjects[0].anchoredObject);
+            if (in_front_of_user && is_user_ready) {
+              document.querySelector('#uitext6').innerHTML = `${valToStr(gps_dist_harvesine)} ${valToStr(gps_bearing)} ${valToStr(coord_z)} ${valToStr(coord_x)}, `
+            
+              const anchorPose = new XRRigidTransform({x: coord_x, y: 0, z: coord_z, w: 1}, {x: 0, y: 0, z: 0, w: 1});
+              frame.createAnchor(anchorPose, xrRefSpace).then((anchor) => {
+                if (added_one) {
+                  //scene.removeNode(anchoredObjects[0].anchoredObject);
 
-                if (anchoredObjects[0].anchor != undefined) {
-                  anchoredObjects[0].anchor.delete();
+                  if (anchoredObjects[0].anchor != undefined) {
+                    anchoredObjects[0].anchor.delete();
+                  }
+                  //anchoredObjects = [];
+                  anchoredObjects[0].anchor = anchor;
+                  //addAnchoredObjectsToScene(anchor);
+                } else {
+                  addAnchoredObjectsToScene(anchor);
+                  added_one = true;
                 }
-                //anchoredObjects = [];
-                anchoredObjects[0].anchor = anchor;
-                //addAnchoredObjectsToScene(anchor);
+
+                added_or_updated_at = +new Date();
+                is_user_ready = false;
+                start_pitch = pitch - gps_bearing_rad;
+              }, (error) => {
+                document.querySelector('#uitext6').innerHTML = "Could not create anchor: " + error;
+              });
+            } else {
+              if (in_front_of_user) {
+                if (!was_in_front_of_user) {
+                  document.querySelector('#uitext5').innerHTML = `<button id="placebutton" style="z-index:1000;color:red;">VLOŽIT OBJEKT</button>`;
+                  document.querySelector('#placebutton').addEventListener("click", make_ready);
+                }
+                document.querySelector('#uitext6').innerHTML = `${valToStr(gps_dist_harvesine)} ${valToStr(gps_bearing)}`;
               } else {
-                addAnchoredObjectsToScene(anchor);
-                added_one = true;
+                document.querySelector('#uitext5').innerHTML = ``;
+                document.querySelector('#uitext6').innerHTML = `${valToStr(gps_dist_harvesine)} ${valToStr(gps_bearing)} otoč se...`;
               }
-              added_or_updated_at = +new Date();
-            }, (error) => {
-              document.querySelector('#uitext6').innerHTML = "Could not create anchor: " + error;
-            });
+            }
+
+            was_in_front_of_user = in_front_of_user;
           }
         }
 
